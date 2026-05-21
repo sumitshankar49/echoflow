@@ -60,9 +60,9 @@ exports.AppModule = AppModule = __decorate([
             }),
             auth_module_1.AuthModule,
             circles_module_1.CirclesModule,
-            reminders_module_1.RemindersModule,
             music_module_1.MusicModule,
             notes_module_1.NotesModule,
+            reminders_module_1.RemindersModule,
         ],
         controllers: [app_controller_1.AppController],
     })

@@ -9,12 +9,9 @@ import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../../database/entities/user.entity';
-import { Note } from '../notes/entities/note.entity';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
-import { ShareCircleNoteDto } from './dto/share-circle-note.dto';
 import { CircleMember } from './entities/circle-member.entity';
-import { CircleSharedNote } from './entities/circle-shared-note.entity';
 import { Circle } from './entities/circle.entity';
 
 @Injectable()
@@ -24,12 +21,8 @@ export class CirclesService {
     private readonly circlesRepository: Repository<Circle>,
     @InjectRepository(CircleMember)
     private readonly circleMembersRepository: Repository<CircleMember>,
-    @InjectRepository(CircleSharedNote)
-    private readonly circleSharedNotesRepository: Repository<CircleSharedNote>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
-    @InjectRepository(Note)
-    private readonly notesRepository: Repository<Note>,
   ) {}
 
   async create(createCircleDto: CreateCircleDto, currentUser: AuthenticatedUser): Promise<Circle> {
@@ -55,11 +48,35 @@ export class CirclesService {
   async findAll(currentUser: AuthenticatedUser): Promise<Circle[]> {
     return this.circlesRepository
       .createQueryBuilder('circle')
-      .innerJoin('circle_members', 'member', 'member.circleId = circle.id')
-      .where('member.userId = :userId', { userId: currentUser.userId })
-      .andWhere('member.status = :status', { status: 'accepted' })
+      .leftJoin('circle.members', 'member')
+      .where('circle.ownerId = :userId', { userId: currentUser.userId })
+      .orWhere('member.userId = :userId', { userId: currentUser.userId })
       .orderBy('circle.updatedAt', 'DESC')
+      .distinct(true)
       .getMany();
+  }
+
+  async findOne(id: string, currentUser: AuthenticatedUser): Promise<Circle> {
+    const circle = await this.circlesRepository.findOne({
+      where: { id },
+    });
+
+    if (!circle) {
+      throw new NotFoundException('Circle not found');
+    }
+
+    const membership = await this.circleMembersRepository.findOne({
+      where: {
+        circleId: id,
+        userId: currentUser.userId,
+      },
+    });
+
+    if (!membership && circle.ownerId !== currentUser.userId) {
+      throw new ForbiddenException('You do not have access to this circle');
+    }
+
+    return circle;
   }
 
   async inviteMember(
@@ -67,7 +84,19 @@ export class CirclesService {
     inviteDto: InviteCircleMemberDto,
     currentUser: AuthenticatedUser,
   ): Promise<CircleMember> {
-    const circle = await this.ensureOwnedCircle(circleId, currentUser.userId);
+    const circle = await this.circlesRepository.findOne({
+      where: {
+        id: circleId,
+      },
+    });
+
+    if (!circle) {
+      throw new NotFoundException('Circle not found');
+    }
+
+    if (circle.ownerId !== currentUser.userId) {
+      throw new ForbiddenException('Only circle owner can invite members');
+    }
 
     const invitee = await this.usersRepository.findOne({
       where: { email: inviteDto.email.toLowerCase() },
@@ -80,112 +109,22 @@ export class CirclesService {
 
     const existingMember = await this.circleMembersRepository.findOne({
       where: {
-        circleId: circle.id,
+        circleId,
         userId: invitee.id,
       },
     });
 
     if (existingMember) {
-      existingMember.status = inviteDto.status ?? existingMember.status;
-      return this.circleMembersRepository.save(existingMember);
+      throw new BadRequestException('User is already part of this circle');
     }
 
     const member = this.circleMembersRepository.create({
-      circleId: circle.id,
+      circleId,
       userId: invitee.id,
       role: 'member',
-      status: inviteDto.status ?? 'invited',
+      status: 'invited',
     });
 
     return this.circleMembersRepository.save(member);
-  }
-
-  async getMembers(circleId: string, currentUser: AuthenticatedUser): Promise<CircleMember[]> {
-    await this.ensureCircleAccessible(circleId, currentUser.userId);
-
-    return this.circleMembersRepository.find({
-      where: { circleId },
-      order: { createdAt: 'ASC' },
-    });
-  }
-
-  async shareNote(
-    circleId: string,
-    shareCircleNoteDto: ShareCircleNoteDto,
-    currentUser: AuthenticatedUser,
-  ): Promise<CircleSharedNote> {
-    await this.ensureCircleAccessible(circleId, currentUser.userId);
-
-    const note = await this.notesRepository.findOne({
-      where: {
-        id: shareCircleNoteDto.noteId,
-        userId: currentUser.userId,
-      },
-      select: { id: true, userId: true, title: true, content: true },
-    });
-
-    if (!note) {
-      throw new NotFoundException('Note not found for current user');
-    }
-
-    const existing = await this.circleSharedNotesRepository.findOne({
-      where: {
-        circleId,
-        noteId: note.id,
-      },
-    });
-
-    if (existing) {
-      throw new BadRequestException('Note is already shared in this circle');
-    }
-
-    const sharedNote = this.circleSharedNotesRepository.create({
-      circleId,
-      noteId: note.id,
-      sharedByUserId: currentUser.userId,
-    });
-
-    return this.circleSharedNotesRepository.save(sharedNote);
-  }
-
-  async getSharedNotes(circleId: string, currentUser: AuthenticatedUser): Promise<CircleSharedNote[]> {
-    await this.ensureCircleAccessible(circleId, currentUser.userId);
-
-    return this.circleSharedNotesRepository.find({
-      where: { circleId },
-      order: { createdAt: 'DESC' },
-      relations: {
-        note: true,
-      },
-    });
-  }
-
-  private async ensureOwnedCircle(circleId: string, userId: string): Promise<Circle> {
-    const circle = await this.circlesRepository.findOne({
-      where: {
-        id: circleId,
-        ownerId: userId,
-      },
-    });
-
-    if (!circle) {
-      throw new ForbiddenException('Only circle owner can perform this action');
-    }
-
-    return circle;
-  }
-
-  private async ensureCircleAccessible(circleId: string, userId: string): Promise<void> {
-    const membership = await this.circleMembersRepository.findOne({
-      where: {
-        circleId,
-        userId,
-        status: 'accepted',
-      },
-    });
-
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this circle');
-    }
   }
 }

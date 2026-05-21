@@ -55,7 +55,9 @@ async function bootstrap(): Promise<void> {
       )
       .build();
 
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    const document = SwaggerModule.createDocument(app, swaggerConfig, {
+      deepScanRoutes: true,
+    });
     const swaggerPath = configService.get<string>('swagger.path', 'api/docs');
 
     SwaggerModule.setup(swaggerPath, app, document, {

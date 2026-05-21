@@ -17,17 +17,13 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../../database/entities/user.entity");
-const note_entity_1 = require("../notes/entities/note.entity");
 const circle_member_entity_1 = require("./entities/circle-member.entity");
-const circle_shared_note_entity_1 = require("./entities/circle-shared-note.entity");
 const circle_entity_1 = require("./entities/circle.entity");
 let CirclesService = class CirclesService {
-    constructor(circlesRepository, circleMembersRepository, circleSharedNotesRepository, usersRepository, notesRepository) {
+    constructor(circlesRepository, circleMembersRepository, usersRepository) {
         this.circlesRepository = circlesRepository;
         this.circleMembersRepository = circleMembersRepository;
-        this.circleSharedNotesRepository = circleSharedNotesRepository;
         this.usersRepository = usersRepository;
-        this.notesRepository = notesRepository;
     }
     async create(createCircleDto, currentUser) {
         const circle = this.circlesRepository.create({
@@ -48,14 +44,43 @@ let CirclesService = class CirclesService {
     async findAll(currentUser) {
         return this.circlesRepository
             .createQueryBuilder('circle')
-            .innerJoin('circle_members', 'member', 'member.circleId = circle.id')
-            .where('member.userId = :userId', { userId: currentUser.userId })
-            .andWhere('member.status = :status', { status: 'accepted' })
+            .leftJoin('circle.members', 'member')
+            .where('circle.ownerId = :userId', { userId: currentUser.userId })
+            .orWhere('member.userId = :userId', { userId: currentUser.userId })
             .orderBy('circle.updatedAt', 'DESC')
+            .distinct(true)
             .getMany();
     }
+    async findOne(id, currentUser) {
+        const circle = await this.circlesRepository.findOne({
+            where: { id },
+        });
+        if (!circle) {
+            throw new common_1.NotFoundException('Circle not found');
+        }
+        const membership = await this.circleMembersRepository.findOne({
+            where: {
+                circleId: id,
+                userId: currentUser.userId,
+            },
+        });
+        if (!membership && circle.ownerId !== currentUser.userId) {
+            throw new common_1.ForbiddenException('You do not have access to this circle');
+        }
+        return circle;
+    }
     async inviteMember(circleId, inviteDto, currentUser) {
-        const circle = await this.ensureOwnedCircle(circleId, currentUser.userId);
+        const circle = await this.circlesRepository.findOne({
+            where: {
+                id: circleId,
+            },
+        });
+        if (!circle) {
+            throw new common_1.NotFoundException('Circle not found');
+        }
+        if (circle.ownerId !== currentUser.userId) {
+            throw new common_1.ForbiddenException('Only circle owner can invite members');
+        }
         const invitee = await this.usersRepository.findOne({
             where: { email: inviteDto.email.toLowerCase() },
             select: { id: true, email: true, name: true },
@@ -65,90 +90,20 @@ let CirclesService = class CirclesService {
         }
         const existingMember = await this.circleMembersRepository.findOne({
             where: {
-                circleId: circle.id,
+                circleId,
                 userId: invitee.id,
             },
         });
         if (existingMember) {
-            existingMember.status = inviteDto.status ?? existingMember.status;
-            return this.circleMembersRepository.save(existingMember);
+            throw new common_1.BadRequestException('User is already part of this circle');
         }
         const member = this.circleMembersRepository.create({
-            circleId: circle.id,
+            circleId,
             userId: invitee.id,
             role: 'member',
-            status: inviteDto.status ?? 'invited',
+            status: 'invited',
         });
         return this.circleMembersRepository.save(member);
-    }
-    async getMembers(circleId, currentUser) {
-        await this.ensureCircleAccessible(circleId, currentUser.userId);
-        return this.circleMembersRepository.find({
-            where: { circleId },
-            order: { createdAt: 'ASC' },
-        });
-    }
-    async shareNote(circleId, shareCircleNoteDto, currentUser) {
-        await this.ensureCircleAccessible(circleId, currentUser.userId);
-        const note = await this.notesRepository.findOne({
-            where: {
-                id: shareCircleNoteDto.noteId,
-                userId: currentUser.userId,
-            },
-            select: { id: true, userId: true, title: true, content: true },
-        });
-        if (!note) {
-            throw new common_1.NotFoundException('Note not found for current user');
-        }
-        const existing = await this.circleSharedNotesRepository.findOne({
-            where: {
-                circleId,
-                noteId: note.id,
-            },
-        });
-        if (existing) {
-            throw new common_1.BadRequestException('Note is already shared in this circle');
-        }
-        const sharedNote = this.circleSharedNotesRepository.create({
-            circleId,
-            noteId: note.id,
-            sharedByUserId: currentUser.userId,
-        });
-        return this.circleSharedNotesRepository.save(sharedNote);
-    }
-    async getSharedNotes(circleId, currentUser) {
-        await this.ensureCircleAccessible(circleId, currentUser.userId);
-        return this.circleSharedNotesRepository.find({
-            where: { circleId },
-            order: { createdAt: 'DESC' },
-            relations: {
-                note: true,
-            },
-        });
-    }
-    async ensureOwnedCircle(circleId, userId) {
-        const circle = await this.circlesRepository.findOne({
-            where: {
-                id: circleId,
-                ownerId: userId,
-            },
-        });
-        if (!circle) {
-            throw new common_1.ForbiddenException('Only circle owner can perform this action');
-        }
-        return circle;
-    }
-    async ensureCircleAccessible(circleId, userId) {
-        const membership = await this.circleMembersRepository.findOne({
-            where: {
-                circleId,
-                userId,
-                status: 'accepted',
-            },
-        });
-        if (!membership) {
-            throw new common_1.ForbiddenException('You are not a member of this circle');
-        }
     }
 };
 exports.CirclesService = CirclesService;
@@ -156,12 +111,8 @@ exports.CirclesService = CirclesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(circle_entity_1.Circle)),
     __param(1, (0, typeorm_1.InjectRepository)(circle_member_entity_1.CircleMember)),
-    __param(2, (0, typeorm_1.InjectRepository)(circle_shared_note_entity_1.CircleSharedNote)),
-    __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(4, (0, typeorm_1.InjectRepository)(note_entity_1.Note)),
+    __param(2, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], CirclesService);

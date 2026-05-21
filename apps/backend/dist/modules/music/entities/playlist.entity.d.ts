@@ -3,8 +3,7 @@ export declare class Playlist {
     id: string;
     name: string;
     description: string | null;
-    coverUrl: string | null;
-    isPublic: boolean;
+    tracks: string[] | null;
     userId: string;
     user: User;
     createdAt: Date;

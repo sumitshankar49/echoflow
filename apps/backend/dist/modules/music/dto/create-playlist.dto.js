@@ -18,45 +18,36 @@ exports.CreatePlaylistDto = CreatePlaylistDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'Playlist name',
-        example: 'Deep Focus Session',
-        minLength: 2,
-        maxLength: 120,
+        example: 'Deep Focus',
+        minLength: 1,
+        maxLength: 150,
     }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.MinLength)(2),
-    (0, class_validator_1.MaxLength)(120),
+    (0, class_validator_1.MinLength)(1),
+    (0, class_validator_1.MaxLength)(150),
     __metadata("design:type", String)
 ], CreatePlaylistDto.prototype, "name", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: 'Optional playlist description',
-        example: 'Instrumental lo-fi and ambient tracks.',
-        maxLength: 400,
+        example: 'Lo-fi and ambient tracks for coding sessions',
+        maxLength: 500,
     }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(400),
+    (0, class_validator_1.MaxLength)(500),
     __metadata("design:type", String)
 ], CreatePlaylistDto.prototype, "description", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: 'Optional playlist cover image URL',
-        example: 'https://cdn.example.com/playlists/focus-cover.jpg',
+        description: 'Optional list of track links or IDs',
+        type: [String],
+        example: ['spotify:track:123', 'spotify:track:456'],
     }),
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsUrl)(),
-    __metadata("design:type", String)
-], CreatePlaylistDto.prototype, "coverUrl", void 0);
-__decorate([
-    (0, swagger_1.ApiPropertyOptional)({
-        description: 'Whether this playlist is visible publicly',
-        example: false,
-        default: false,
-    }),
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsBoolean)(),
-    __metadata("design:type", Boolean)
-], CreatePlaylistDto.prototype, "isPublic", void 0);
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsString)({ each: true }),
+    __metadata("design:type", Array)
+], CreatePlaylistDto.prototype, "tracks", void 0);
 //# sourceMappingURL=create-playlist.dto.js.map

@@ -18,20 +18,20 @@ exports.CreateReminderDto = CreateReminderDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'Reminder title',
-        example: 'Pay electricity bill',
-        minLength: 2,
+        example: 'Drink water',
+        minLength: 1,
         maxLength: 150,
     }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.MinLength)(2),
+    (0, class_validator_1.MinLength)(1),
     (0, class_validator_1.MaxLength)(150),
     __metadata("design:type", String)
 ], CreateReminderDto.prototype, "title", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: 'Optional reminder details',
-        example: 'Due before midnight',
+        description: 'Optional reminder description',
+        example: 'Take a short hydration break',
         maxLength: 500,
     }),
     (0, class_validator_1.IsOptional)(),
@@ -41,15 +41,15 @@ __decorate([
 ], CreateReminderDto.prototype, "description", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Reminder expiry date-time',
-        example: '2026-06-01T10:00:00.000Z',
+        description: 'Date and time when reminder should trigger',
+        example: '2026-05-22T08:30:00.000Z',
     }),
     (0, class_validator_1.IsDateString)(),
     __metadata("design:type", String)
-], CreateReminderDto.prototype, "expiresAt", void 0);
+], CreateReminderDto.prototype, "remindAt", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
-        description: 'Mark reminder as completed',
+        description: 'Whether reminder is completed',
         example: false,
         default: false,
     }),

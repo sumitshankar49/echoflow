@@ -4,12 +4,83 @@ generator client {
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id            String             @id @default(uuid()) @db.VarChar(36)
+  name          String             @db.VarChar(100)
+  email         String             @unique(map: "IDX_97672ac88f789774dd47f7c8be") @db.VarChar(150)
+  password      String             @db.VarChar(255)
+  createdAt     DateTime           @default(now()) @db.Timestamp(6)
+  updatedAt     DateTime           @default(now()) @updatedAt @db.Timestamp(6)
+  circleMembers CircleMember[]
+  sharedNotes   CircleSharedNote[] @relation("CircleSharedBy")
+  ownedCircles  Circle[]           @relation("CircleOwner")
+  notes         Note[]
+
+  @@map("users")
+}
+
+model Note {
+  id           String             @id @default(uuid()) @db.VarChar(36)
+  title        String             @db.VarChar(150)
+  content      String             @db.Text
+  voiceUrl     String?            @db.VarChar(500)
+  tags         String?            @db.Text
+  isFavorite   Int                @default(0) @db.TinyInt
+  userId       String             @db.VarChar(255)
+  createdAt    DateTime           @default(now()) @db.Timestamp(6)
+  updatedAt    DateTime           @default(now()) @updatedAt @db.Timestamp(6)
+  circleShared CircleSharedNote[]
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_829532ff766505ad7c71592c6a5")
+
+  @@index([userId], map: "idx_notes_user_id")
+  @@map("notes")
+}
+
+model Circle {
+  id          String             @id @default(uuid()) @db.Char(36)
+  name        String             @db.VarChar(100)
+  description String?            @db.VarChar(300)
+  ownerId     String             @db.Char(36)
+  createdAt   DateTime           @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime           @default(now()) @updatedAt @db.Timestamp(0)
+  members     CircleMember[]
+  sharedNotes CircleSharedNote[]
+  owner       User               @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circles_owner")
+
+  @@index([ownerId], map: "fk_circles_owner")
+  @@map("circles")
+}
+
+model CircleMember {
+  id        String   @id @default(uuid()) @db.Char(36)
+  circleId  String   @db.Char(36)
+  userId    String   @db.Char(36)
+  role      String   @default("member") @db.VarChar(20)
+  status    String   @default("invited") @db.VarChar(20)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(0)
+  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_members_circle")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_members_user")
+
+  @@unique([circleId, userId], map: "uq_circle_member_user")
+  @@index([userId], map: "fk_circle_members_user")
+  @@map("circle_members")
+}
+
+model CircleSharedNote {
+  id             String   @id @default(uuid()) @db.Char(36)
+  circleId       String   @db.Char(36)
+  noteId         String   @db.Char(36)
+  sharedByUserId String   @db.Char(36)
+  createdAt      DateTime @default(now()) @db.Timestamp(0)
+  circle         Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_shared_notes_circle")
+  note           Note     @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_shared_notes_note")
+  sharedBy       User     @relation("CircleSharedBy", fields: [sharedByUserId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_shared_notes_user")
+
+  @@unique([circleId, noteId], map: "uq_circle_shared_note")
+  @@index([noteId], map: "fk_circle_shared_notes_note")
+  @@index([sharedByUserId], map: "fk_circle_shared_notes_user")
+  @@map("circle_shared_notes")
 }

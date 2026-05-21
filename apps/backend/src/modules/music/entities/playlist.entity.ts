@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -15,18 +16,16 @@ export class Playlist {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 120 })
+  @Column({ type: 'varchar', length: 150 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 400, nullable: true })
+  @Column({ type: 'varchar', length: 500, nullable: true })
   description!: string | null;
 
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  coverUrl!: string | null;
+  @Column({ type: 'simple-array', nullable: true })
+  tracks!: string[] | null;
 
-  @Column({ type: 'boolean', default: false })
-  isPublic!: boolean;
-
+  @Index('idx_playlists_user_id')
   @Column({ type: 'uuid' })
   userId!: string;
 

@@ -28,14 +28,15 @@ __decorate([
     __metadata("design:type", Object)
 ], Reminder.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'datetime' }),
+    (0, typeorm_1.Column)({ type: 'timestamp' }),
     __metadata("design:type", Date)
-], Reminder.prototype, "expiresAt", void 0);
+], Reminder.prototype, "remindAt", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'boolean', default: false }),
     __metadata("design:type", Boolean)
 ], Reminder.prototype, "isCompleted", void 0);
 __decorate([
+    (0, typeorm_1.Index)('idx_reminders_user_id'),
     (0, typeorm_1.Column)({ type: 'uuid' }),
     __metadata("design:type", String)
 ], Reminder.prototype, "userId", void 0);

@@ -18,30 +18,32 @@ const swagger_1 = require("@nestjs/swagger");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const create_playlist_dto_1 = require("./dto/create-playlist.dto");
-const update_playlist_dto_1 = require("./dto/update-playlist.dto");
 const playlist_entity_1 = require("./entities/playlist.entity");
 const music_service_1 = require("./music.service");
 let MusicController = class MusicController {
     constructor(musicService) {
         this.musicService = musicService;
     }
-    create(createPlaylistDto, currentUser) {
-        return this.musicService.create(createPlaylistDto, currentUser);
-    }
     findAll(currentUser) {
         return this.musicService.findAll(currentUser);
+    }
+    create(createPlaylistDto, currentUser) {
+        return this.musicService.create(createPlaylistDto, currentUser);
     }
     findOne(id, currentUser) {
         return this.musicService.findOne(id, currentUser);
     }
-    update(id, updatePlaylistDto, currentUser) {
-        return this.musicService.update(id, updatePlaylistDto, currentUser);
-    }
-    remove(id, currentUser) {
-        return this.musicService.remove(id, currentUser);
-    }
 };
 exports.MusicController = MusicController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get playlists for current user' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Playlists fetched successfully', type: playlist_entity_1.Playlist, isArray: true }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], MusicController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create playlist' }),
@@ -54,15 +56,6 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], MusicController.prototype, "create", null);
 __decorate([
-    (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get playlists for current user' }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Playlists fetched successfully', type: playlist_entity_1.Playlist, isArray: true }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], MusicController.prototype, "findAll", null);
-__decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get playlist by id' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Playlist UUID' }),
@@ -73,34 +66,6 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], MusicController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    (0, swagger_1.ApiOperation)({ summary: 'Update playlist by id' }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'Playlist UUID' }),
-    (0, swagger_1.ApiBody)({ type: update_playlist_dto_1.UpdatePlaylistDto }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Playlist updated successfully', type: playlist_entity_1.Playlist }),
-    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
-    __param(1, (0, common_1.Body)()),
-    __param(2, (0, current_user_decorator_1.CurrentUser)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_playlist_dto_1.UpdatePlaylistDto, Object]),
-    __metadata("design:returntype", Promise)
-], MusicController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Delete playlist by id' }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'Playlist UUID' }),
-    (0, swagger_1.ApiOkResponse)({
-        description: 'Playlist deleted successfully',
-        schema: { example: { message: 'Playlist deleted successfully' } },
-    }),
-    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
-    __param(1, (0, current_user_decorator_1.CurrentUser)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], MusicController.prototype, "remove", null);
 exports.MusicController = MusicController = __decorate([
     (0, swagger_1.ApiTags)('Music'),
     (0, swagger_1.ApiBearerAuth)('access-token'),

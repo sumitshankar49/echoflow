@@ -20,22 +20,19 @@ __decorate([
     __metadata("design:type", String)
 ], Playlist.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 120 }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 150 }),
     __metadata("design:type", String)
 ], Playlist.prototype, "name", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 400, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
     __metadata("design:type", Object)
 ], Playlist.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 500, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'simple-array', nullable: true }),
     __metadata("design:type", Object)
-], Playlist.prototype, "coverUrl", void 0);
+], Playlist.prototype, "tracks", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
-    __metadata("design:type", Boolean)
-], Playlist.prototype, "isPublic", void 0);
-__decorate([
+    (0, typeorm_1.Index)('idx_playlists_user_id'),
     (0, typeorm_1.Column)({ type: 'uuid' }),
     __metadata("design:type", String)
 ], Playlist.prototype, "userId", void 0);

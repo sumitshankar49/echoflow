@@ -1,6 +1,6 @@
 export declare class CreateReminderDto {
     title: string;
     description?: string;
-    expiresAt: string;
+    remindAt: string;
     isCompleted?: boolean;
 }

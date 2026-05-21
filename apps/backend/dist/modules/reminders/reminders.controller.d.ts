@@ -6,9 +6,8 @@ import { RemindersService } from './reminders.service';
 export declare class RemindersController {
     private readonly remindersService;
     constructor(remindersService: RemindersService);
-    create(createReminderDto: CreateReminderDto, currentUser: AuthenticatedUser): Promise<Reminder>;
     findAll(currentUser: AuthenticatedUser): Promise<Reminder[]>;
-    findOne(id: string, currentUser: AuthenticatedUser): Promise<Reminder>;
+    create(createReminderDto: CreateReminderDto, currentUser: AuthenticatedUser): Promise<Reminder>;
     update(id: string, updateReminderDto: UpdateReminderDto, currentUser: AuthenticatedUser): Promise<Reminder>;
     remove(id: string, currentUser: AuthenticatedUser): Promise<{
         message: string;

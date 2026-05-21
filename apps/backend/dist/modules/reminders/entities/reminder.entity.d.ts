@@ -3,7 +3,7 @@ export declare class Reminder {
     id: string;
     title: string;
     description: string | null;
-    expiresAt: Date;
+    remindAt: Date;
     isCompleted: boolean;
     userId: string;
     user: User;

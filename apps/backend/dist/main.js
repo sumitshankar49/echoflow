@@ -40,7 +40,9 @@ async function bootstrap() {
             in: 'header',
         }, 'access-token')
             .build();
-        const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig);
+        const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig, {
+            deepScanRoutes: true,
+        });
         const swaggerPath = configService.get('swagger.path', 'api/docs');
         swagger_1.SwaggerModule.setup(swaggerPath, app, document, {
             swaggerOptions: {

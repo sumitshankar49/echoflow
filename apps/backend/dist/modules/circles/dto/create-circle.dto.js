@@ -18,25 +18,25 @@ exports.CreateCircleDto = CreateCircleDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'Circle name',
-        example: 'Family Group',
-        minLength: 2,
-        maxLength: 100,
+        example: 'Family',
+        minLength: 1,
+        maxLength: 120,
     }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.MinLength)(2),
-    (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.MinLength)(1),
+    (0, class_validator_1.MaxLength)(120),
     __metadata("design:type", String)
 ], CreateCircleDto.prototype, "name", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: 'Optional circle description',
-        example: 'Shared circle for family notes and reminders.',
-        maxLength: 300,
+        example: 'Shared planning circle for family notes and reminders',
+        maxLength: 500,
     }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.MaxLength)(300),
+    (0, class_validator_1.MaxLength)(500),
     __metadata("design:type", String)
 ], CreateCircleDto.prototype, "description", void 0);
 //# sourceMappingURL=create-circle.dto.js.map

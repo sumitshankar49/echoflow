@@ -17,21 +17,13 @@ class InviteCircleMemberDto {
 exports.InviteCircleMemberDto = InviteCircleMemberDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Email address of user to invite',
+        description: 'Email of user to invite to this circle',
         example: 'member@example.com',
-    }),
-    (0, class_validator_1.IsEmail)(),
-    __metadata("design:type", String)
-], InviteCircleMemberDto.prototype, "email", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: 'Membership status for invited user',
-        example: 'invited',
-        enum: ['invited', 'accepted'],
-        default: 'invited',
     }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.MaxLength)(150),
     __metadata("design:type", String)
-], InviteCircleMemberDto.prototype, "status", void 0);
+], InviteCircleMemberDto.prototype, "email", void 0);
 //# sourceMappingURL=invite-circle-member.dto.js.map

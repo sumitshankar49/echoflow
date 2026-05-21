@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -21,12 +22,13 @@ export class Reminder {
   @Column({ type: 'varchar', length: 500, nullable: true })
   description!: string | null;
 
-  @Column({ type: 'datetime' })
-  expiresAt!: Date;
+  @Column({ type: 'timestamp' })
+  remindAt!: Date;
 
   @Column({ type: 'boolean', default: false })
   isCompleted!: boolean;
 
+  @Index('idx_reminders_user_id')
   @Column({ type: 'uuid' })
   userId!: string;
 

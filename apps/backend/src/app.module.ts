@@ -47,9 +47,9 @@ import { RemindersModule } from './modules/reminders/reminders.module';
     }),
     AuthModule,
     CirclesModule,
-    RemindersModule,
     MusicModule,
     NotesModule,
+    RemindersModule,
   ],
   controllers: [AppController],
 })

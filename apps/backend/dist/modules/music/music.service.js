@@ -25,20 +25,15 @@ let MusicService = class MusicService {
         const playlist = this.playlistsRepository.create({
             name: createPlaylistDto.name,
             description: createPlaylistDto.description ?? null,
-            coverUrl: createPlaylistDto.coverUrl ?? null,
-            isPublic: createPlaylistDto.isPublic ?? false,
+            tracks: createPlaylistDto.tracks?.map((track) => track.trim()).filter(Boolean) ?? null,
             userId: currentUser.userId,
         });
         return this.playlistsRepository.save(playlist);
     }
     async findAll(currentUser) {
         return this.playlistsRepository.find({
-            where: {
-                userId: currentUser.userId,
-            },
-            order: {
-                updatedAt: 'DESC',
-            },
+            where: { userId: currentUser.userId },
+            order: { updatedAt: 'DESC' },
         });
     }
     async findOne(id, currentUser) {
@@ -52,22 +47,6 @@ let MusicService = class MusicService {
             throw new common_1.NotFoundException('Playlist not found');
         }
         return playlist;
-    }
-    async update(id, updatePlaylistDto, currentUser) {
-        const playlist = await this.findOne(id, currentUser);
-        const updatedPlaylist = this.playlistsRepository.merge(playlist, {
-            ...updatePlaylistDto,
-            description: updatePlaylistDto.description === undefined
-                ? playlist.description
-                : updatePlaylistDto.description,
-            coverUrl: updatePlaylistDto.coverUrl === undefined ? playlist.coverUrl : updatePlaylistDto.coverUrl,
-        });
-        return this.playlistsRepository.save(updatedPlaylist);
-    }
-    async remove(id, currentUser) {
-        const playlist = await this.findOne(id, currentUser);
-        await this.playlistsRepository.remove(playlist);
-        return { message: 'Playlist deleted successfully' };
     }
 };
 exports.MusicService = MusicService;

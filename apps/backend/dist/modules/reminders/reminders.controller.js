@@ -25,14 +25,11 @@ let RemindersController = class RemindersController {
     constructor(remindersService) {
         this.remindersService = remindersService;
     }
-    create(createReminderDto, currentUser) {
-        return this.remindersService.create(createReminderDto, currentUser);
-    }
     findAll(currentUser) {
         return this.remindersService.findAll(currentUser);
     }
-    findOne(id, currentUser) {
-        return this.remindersService.findOne(id, currentUser);
+    create(createReminderDto, currentUser) {
+        return this.remindersService.create(createReminderDto, currentUser);
     }
     update(id, updateReminderDto, currentUser) {
         return this.remindersService.update(id, updateReminderDto, currentUser);
@@ -42,6 +39,15 @@ let RemindersController = class RemindersController {
     }
 };
 exports.RemindersController = RemindersController;
+__decorate([
+    (0, common_1.Get)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get reminders for current user' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Reminders fetched successfully', type: reminder_entity_1.Reminder, isArray: true }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], RemindersController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create reminder' }),
@@ -53,26 +59,6 @@ __decorate([
     __metadata("design:paramtypes", [create_reminder_dto_1.CreateReminderDto, Object]),
     __metadata("design:returntype", Promise)
 ], RemindersController.prototype, "create", null);
-__decorate([
-    (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get reminders for current user' }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Reminders fetched successfully', type: reminder_entity_1.Reminder, isArray: true }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], RemindersController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get reminder by id' }),
-    (0, swagger_1.ApiParam)({ name: 'id', description: 'Reminder UUID' }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Reminder fetched successfully', type: reminder_entity_1.Reminder }),
-    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
-    __param(1, (0, current_user_decorator_1.CurrentUser)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], RemindersController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Update reminder by id' }),

@@ -40,6 +40,13 @@ import { RemindersService } from './reminders.service';
 export class RemindersController {
   constructor(private readonly remindersService: RemindersService) {}
 
+  @Get()
+  @ApiOperation({ summary: 'Get reminders for current user' })
+  @ApiOkResponse({ description: 'Reminders fetched successfully', type: Reminder, isArray: true })
+  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Reminder[]> {
+    return this.remindersService.findAll(currentUser);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create reminder' })
   @ApiBody({ type: CreateReminderDto })
@@ -49,24 +56,6 @@ export class RemindersController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<Reminder> {
     return this.remindersService.create(createReminderDto, currentUser);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'Get reminders for current user' })
-  @ApiOkResponse({ description: 'Reminders fetched successfully', type: Reminder, isArray: true })
-  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Reminder[]> {
-    return this.remindersService.findAll(currentUser);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get reminder by id' })
-  @ApiParam({ name: 'id', description: 'Reminder UUID' })
-  @ApiOkResponse({ description: 'Reminder fetched successfully', type: Reminder })
-  findOne(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<Reminder> {
-    return this.remindersService.findOne(id, currentUser);
   }
 
   @Patch(':id')

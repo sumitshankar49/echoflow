@@ -21,23 +21,15 @@ __decorate([
     __metadata("design:type", String)
 ], CircleMember.prototype, "id", void 0);
 __decorate([
+    (0, typeorm_1.Index)('idx_circle_members_circle_id'),
     (0, typeorm_1.Column)({ type: 'uuid' }),
     __metadata("design:type", String)
 ], CircleMember.prototype, "circleId", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => circle_entity_1.Circle, { onDelete: 'CASCADE' }),
-    (0, typeorm_1.JoinColumn)({ name: 'circleId' }),
-    __metadata("design:type", circle_entity_1.Circle)
-], CircleMember.prototype, "circle", void 0);
-__decorate([
+    (0, typeorm_1.Index)('idx_circle_members_user_id'),
     (0, typeorm_1.Column)({ type: 'uuid' }),
     __metadata("design:type", String)
 ], CircleMember.prototype, "userId", void 0);
-__decorate([
-    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'CASCADE' }),
-    (0, typeorm_1.JoinColumn)({ name: 'userId' }),
-    __metadata("design:type", user_entity_1.User)
-], CircleMember.prototype, "user", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'member' }),
     __metadata("design:type", String)
@@ -46,6 +38,16 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 20, default: 'invited' }),
     __metadata("design:type", String)
 ], CircleMember.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => circle_entity_1.Circle, (circle) => circle.members, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)({ name: 'circleId' }),
+    __metadata("design:type", circle_entity_1.Circle)
+], CircleMember.prototype, "circle", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)({ name: 'userId' }),
+    __metadata("design:type", user_entity_1.User)
+], CircleMember.prototype, "user", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp' }),
     __metadata("design:type", Date)

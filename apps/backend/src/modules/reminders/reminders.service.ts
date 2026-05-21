@@ -21,7 +21,7 @@ export class RemindersService {
     const reminder = this.remindersRepository.create({
       title: createReminderDto.title,
       description: createReminderDto.description ?? null,
-      expiresAt: new Date(createReminderDto.expiresAt),
+      remindAt: new Date(createReminderDto.remindAt),
       isCompleted: createReminderDto.isCompleted ?? false,
       userId: currentUser.userId,
     });
@@ -32,9 +32,7 @@ export class RemindersService {
   async findAll(currentUser: AuthenticatedUser): Promise<Reminder[]> {
     return this.remindersRepository.find({
       where: { userId: currentUser.userId },
-      order: {
-        expiresAt: 'ASC',
-      },
+      order: { remindAt: 'ASC' },
     });
   }
 
@@ -62,13 +60,7 @@ export class RemindersService {
 
     const updatedReminder = this.remindersRepository.merge(reminder, {
       ...updateReminderDto,
-      expiresAt: updateReminderDto.expiresAt
-        ? new Date(updateReminderDto.expiresAt)
-        : reminder.expiresAt,
-      description:
-        updateReminderDto.description === undefined
-          ? reminder.description
-          : updateReminderDto.description,
+      remindAt: updateReminderDto.remindAt ? new Date(updateReminderDto.remindAt) : reminder.remindAt,
     });
 
     return this.remindersRepository.save(updatedReminder);

@@ -12,19 +12,19 @@ import {
 export class CreateReminderDto {
   @ApiProperty({
     description: 'Reminder title',
-    example: 'Pay electricity bill',
-    minLength: 2,
+    example: 'Drink water',
+    minLength: 1,
     maxLength: 150,
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(2)
+  @MinLength(1)
   @MaxLength(150)
   title!: string;
 
   @ApiPropertyOptional({
-    description: 'Optional reminder details',
-    example: 'Due before midnight',
+    description: 'Optional reminder description',
+    example: 'Take a short hydration break',
     maxLength: 500,
   })
   @IsOptional()
@@ -33,14 +33,14 @@ export class CreateReminderDto {
   description?: string;
 
   @ApiProperty({
-    description: 'Reminder expiry date-time',
-    example: '2026-06-01T10:00:00.000Z',
+    description: 'Date and time when reminder should trigger',
+    example: '2026-05-22T08:30:00.000Z',
   })
   @IsDateString()
-  expiresAt!: string;
+  remindAt!: string;
 
   @ApiPropertyOptional({
-    description: 'Mark reminder as completed',
+    description: 'Whether reminder is completed',
     example: false,
     default: false,
   })

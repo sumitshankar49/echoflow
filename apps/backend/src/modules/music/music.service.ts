@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
-import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Playlist } from './entities/playlist.entity';
 
 @Injectable()
@@ -21,8 +20,7 @@ export class MusicService {
     const playlist = this.playlistsRepository.create({
       name: createPlaylistDto.name,
       description: createPlaylistDto.description ?? null,
-      coverUrl: createPlaylistDto.coverUrl ?? null,
-      isPublic: createPlaylistDto.isPublic ?? false,
+      tracks: createPlaylistDto.tracks?.map((track) => track.trim()).filter(Boolean) ?? null,
       userId: currentUser.userId,
     });
 
@@ -31,12 +29,8 @@ export class MusicService {
 
   async findAll(currentUser: AuthenticatedUser): Promise<Playlist[]> {
     return this.playlistsRepository.find({
-      where: {
-        userId: currentUser.userId,
-      },
-      order: {
-        updatedAt: 'DESC',
-      },
+      where: { userId: currentUser.userId },
+      order: { updatedAt: 'DESC' },
     });
   }
 
@@ -53,31 +47,5 @@ export class MusicService {
     }
 
     return playlist;
-  }
-
-  async update(
-    id: string,
-    updatePlaylistDto: UpdatePlaylistDto,
-    currentUser: AuthenticatedUser,
-  ): Promise<Playlist> {
-    const playlist = await this.findOne(id, currentUser);
-
-    const updatedPlaylist = this.playlistsRepository.merge(playlist, {
-      ...updatePlaylistDto,
-      description:
-        updatePlaylistDto.description === undefined
-          ? playlist.description
-          : updatePlaylistDto.description,
-      coverUrl: updatePlaylistDto.coverUrl === undefined ? playlist.coverUrl : updatePlaylistDto.coverUrl,
-    });
-
-    return this.playlistsRepository.save(updatedPlaylist);
-  }
-
-  async remove(id: string, currentUser: AuthenticatedUser): Promise<{ message: string }> {
-    const playlist = await this.findOne(id, currentUser);
-    await this.playlistsRepository.remove(playlist);
-
-    return { message: 'Playlist deleted successfully' };
   }
 }
