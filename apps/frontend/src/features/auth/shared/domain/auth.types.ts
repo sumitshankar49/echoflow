@@ -18,4 +18,24 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  gender?: string | null;
+  dob?: string | null;
+  mobileNumber?: string | null;
+  relationshipStatus?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface MessageResponse {
+  message: string;
 }

@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/api';
+import { apiClient } from '@/shared/api/client';
 import type { Circle, CreateCirclePayload, InviteMemberPayload } from '../domain/circles.types';
 
 export const circlesService = {

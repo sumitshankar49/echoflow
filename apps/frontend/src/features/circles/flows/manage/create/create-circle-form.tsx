@@ -4,6 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { createCircleSchema, type CreateCircleSchema } from '../../../shared/domain/circles.schema';
 import { useCreateCircle } from './use-create-circle';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function CreateCircleForm({ onSuccess }: { onSuccess?: () => void }) {
   const { mutateAsync, isPending } = useCreateCircle();
@@ -20,27 +23,17 @@ export function CreateCircleForm({ onSuccess }: { onSuccess?: () => void }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="mb-1 block text-sm font-medium">Name</label>
-        <input
-          className="w-full rounded-lg border px-3 py-2 text-sm"
-          {...register('name')}
-        />
+        <Label className="mb-2 block">Name</Label>
+        <Input placeholder="Friends" {...register('name')} />
         {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name.message}</p>}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Description</label>
-        <input
-          className="w-full rounded-lg border px-3 py-2 text-sm"
-          {...register('description')}
-        />
+        <Label className="mb-2 block">Description</Label>
+        <Input placeholder="What this circle is for" {...register('description')} />
       </div>
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-60"
-      >
+      <Button type="submit" disabled={isPending}>
         {isPending ? 'Creating…' : 'Create circle'}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/api';
+import { apiClient } from '@/shared/api/client';
 import type { Playlist, CreatePlaylistPayload, UpdatePlaylistPayload } from '../domain/music.types';
 
 export const musicService = {

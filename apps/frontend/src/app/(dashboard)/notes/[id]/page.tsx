@@ -1,3 +1,5 @@
+import { NoteDetailView } from '@/features/notes/flows/view/detail/note-detail-view';
+
 export default async function NoteDetailPage({
   params,
 }: {
@@ -5,5 +7,5 @@ export default async function NoteDetailPage({
 }) {
   const { id } = await params;
 
-  return <div>{/* NoteDetailView id={id} */}</div>;
+  return <NoteDetailView id={id} />;
 }

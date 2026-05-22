@@ -1,39 +1,62 @@
 'use client';
 
+import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  AUTH_BUTTON_LABELS,
+  AUTH_FIELD_LABELS,
+  AUTH_FIELD_PLACEHOLDERS,
+} from '@/shared/constants';
 import { useLoginForm } from './use-login-form';
 
 export function LoginForm() {
-  const { form, onSubmit } = useLoginForm();
+  const { form, onSubmit, isSubmitting } = useLoginForm();
   const { register, formState: { errors } } = form;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <motion.form
+      onSubmit={onSubmit}
+      className="space-y-4"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+    >
       <div>
-        <label className="mb-1 block text-sm font-medium">Email</label>
-        <input
+        <Label className="mb-2 block">{AUTH_FIELD_LABELS.EMAIL}</Label>
+        <Input
           type="email"
-          className="w-full rounded-lg border px-3 py-2 text-sm"
+          placeholder={AUTH_FIELD_PLACEHOLDERS.EMAIL}
           {...register('email')}
         />
         {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
       </div>
       <div>
-        <label className="mb-1 block text-sm font-medium">Password</label>
-        <input
+        <Label className="mb-2 block">{AUTH_FIELD_LABELS.PASSWORD}</Label>
+        <Input
           type="password"
-          className="w-full rounded-lg border px-3 py-2 text-sm"
+          placeholder={AUTH_FIELD_PLACEHOLDERS.PASSWORD}
           {...register('password')}
         />
         {errors.password && (
           <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
         )}
       </div>
-      <button
-        type="submit"
-        className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-      >
-        Sign in
-      </button>
-    </form>
+      <motion.div whileHover={{ y: -1 }} transition={{ duration: 0.15 }}>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {AUTH_BUTTON_LABELS.SIGNING_IN}
+            </span>
+          ) : (
+            AUTH_BUTTON_LABELS.SIGN_IN
+          )}
+        </Button>
+      </motion.div>
+    </motion.form>
   );
 }
