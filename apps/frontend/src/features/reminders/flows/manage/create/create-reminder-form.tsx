@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createReminderSchema, type CreateReminderSchema } from '../../shared/domain/reminders.schema';
+import { createReminderSchema, type CreateReminderSchema } from '../../../shared/domain/reminders.schema';
 import { useCreateReminder } from './use-create-reminder';
 
 export function CreateReminderForm({ onSuccess }: { onSuccess?: () => void }) {

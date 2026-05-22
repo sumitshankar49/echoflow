@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createCircleSchema, type CreateCircleSchema } from '../../shared/domain/circles.schema';
+import { createCircleSchema, type CreateCircleSchema } from '../../../shared/domain/circles.schema';
 import { useCreateCircle } from './use-create-circle';
 
 export function CreateCircleForm({ onSuccess }: { onSuccess?: () => void }) {

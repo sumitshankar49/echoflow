@@ -1,3 +1,9 @@
-export default function NoteDetailPage({ params }: { params: { id: string } }) {
-  return <div>{/* NoteDetailView id={params.id} */}</div>;
+export default async function NoteDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <div>{/* NoteDetailView id={id} */}</div>;
 }

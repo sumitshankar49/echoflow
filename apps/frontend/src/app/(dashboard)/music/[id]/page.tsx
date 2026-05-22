@@ -1,3 +1,9 @@
-export default function PlaylistDetailPage({ params }: { params: { id: string } }) {
-  return <div>{/* PlaylistDetailView id={params.id} */}</div>;
+export default async function PlaylistDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  return <div>{/* PlaylistDetailView id={id} */}</div>;
 }

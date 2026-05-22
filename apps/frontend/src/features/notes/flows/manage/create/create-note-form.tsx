@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createNoteSchema, type CreateNoteSchema } from '../../shared/domain/notes.schema';
+import { createNoteSchema, type CreateNoteSchema } from '../../../shared/domain/notes.schema';
 import { useCreateNote } from './use-create-note';
 
 export function CreateNoteForm({ onSuccess }: { onSuccess?: () => void }) {

@@ -3,8 +3,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
-import { registerSchema, type RegisterSchema } from '../../shared/domain/auth.schema';
-import { authService } from '../../shared/data/auth.service';
+import { registerSchema, type RegisterSchema } from '../../../shared/domain/auth.schema';
+import { authService } from '../../../shared/data/auth.service';
 import { useAuthStore } from '@/shared/store/auth.store';
 
 export function useRegisterForm() {

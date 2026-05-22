@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { circlesService } from '../../shared/data/circles.service';
-import { circlesQueryKeys } from '../../shared/data/circles.query-keys';
+import { circlesService } from '../../../shared/data/circles.service';
+import { circlesQueryKeys } from '../../../shared/data/circles.query-keys';
 
 export function useCreateCircle() {
   const qc = useQueryClient();

@@ -2,7 +2,7 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createPlaylistSchema, type CreatePlaylistSchema } from '../../shared/domain/music.schema';
+import { createPlaylistSchema, type CreatePlaylistSchema } from '../../../shared/domain/music.schema';
 import { useCreatePlaylist } from './use-create-playlist';
 
 export function CreatePlaylistForm({ onSuccess }: { onSuccess?: () => void }) {
