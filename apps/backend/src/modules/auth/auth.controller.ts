@@ -13,10 +13,17 @@ import {
 import { Throttle } from '@nestjs/throttler';
 
 import { AuthService } from './auth.service';
-import type { LogoutResponse, TokenResponse } from './auth.service';
+import type {
+  ForgotPasswordResponse,
+  LogoutResponse,
+  ResetPasswordResponse,
+  TokenResponse,
+} from './auth.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { User } from '../../database/entities/user.entity';
 import {
   AuthenticatedUser,
@@ -40,6 +47,10 @@ export class AuthController {
         id: 'b0525fae-31d6-4890-baed-caf96d2ff97a',
         name: 'Candy User',
         email: 'candy@example.com',
+        gender: 'female',
+        dob: '1998-04-23',
+        mobileNumber: '+919999999999',
+        relationshipStatus: 'single',
         createdAt: '2026-05-21T10:00:00.000Z',
         updatedAt: '2026-05-21T10:00:00.000Z',
       },
@@ -110,6 +121,43 @@ export class AuthController {
   @ApiUnauthorizedResponse({ description: 'Invalid refresh token' })
   refresh(@Body() refreshTokenDto: RefreshTokenDto): Promise<TokenResponse> {
     return this.authService.refreshTokens(refreshTokenDto);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send password reset email' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset request handled',
+    schema: {
+      example: {
+        message: 'If an account with that email exists, a reset link has been sent.',
+      },
+    },
+  })
+  forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto): Promise<ForgotPasswordResponse> {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using email token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset successful',
+    schema: {
+      example: {
+        message: 'Password reset successfully',
+      },
+    },
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid reset token, expired token, or password confirmation mismatch',
+  })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<ResetPasswordResponse> {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('logout')

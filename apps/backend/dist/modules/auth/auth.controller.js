@@ -17,9 +17,11 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const throttler_1 = require("@nestjs/throttler");
 const auth_service_1 = require("./auth.service");
+const forgot_password_dto_1 = require("./dto/forgot-password.dto");
 const login_dto_1 = require("./dto/login.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const register_dto_1 = require("./dto/register.dto");
+const reset_password_dto_1 = require("./dto/reset-password.dto");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 let AuthController = class AuthController {
@@ -38,6 +40,12 @@ let AuthController = class AuthController {
     refresh(refreshTokenDto) {
         return this.authService.refreshTokens(refreshTokenDto);
     }
+    forgotPassword(forgotPasswordDto) {
+        return this.authService.forgotPassword(forgotPasswordDto);
+    }
+    resetPassword(resetPasswordDto) {
+        return this.authService.resetPassword(resetPasswordDto);
+    }
     logout(refreshTokenDto) {
         return this.authService.logout(refreshTokenDto);
     }
@@ -55,6 +63,10 @@ __decorate([
                 id: 'b0525fae-31d6-4890-baed-caf96d2ff97a',
                 name: 'Candy User',
                 email: 'candy@example.com',
+                gender: 'female',
+                dob: '1998-04-23',
+                mobileNumber: '+919999999999',
+                relationshipStatus: 'single',
                 createdAt: '2026-05-21T10:00:00.000Z',
                 updatedAt: '2026-05-21T10:00:00.000Z',
             },
@@ -134,6 +146,47 @@ __decorate([
     __metadata("design:paramtypes", [refresh_token_dto_1.RefreshTokenDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "refresh", null);
+__decorate([
+    (0, common_1.Post)('forgot-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Send password reset email' }),
+    (0, swagger_1.ApiBody)({ type: forgot_password_dto_1.ForgotPasswordDto }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Password reset request handled',
+        schema: {
+            example: {
+                message: 'If an account with that email exists, a reset link has been sent.',
+            },
+        },
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "forgotPassword", null);
+__decorate([
+    (0, common_1.Post)('reset-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Reset password using email token' }),
+    (0, swagger_1.ApiBody)({ type: reset_password_dto_1.ResetPasswordDto }),
+    (0, swagger_1.ApiResponse)({
+        status: common_1.HttpStatus.OK,
+        description: 'Password reset successful',
+        schema: {
+            example: {
+                message: 'Password reset successfully',
+            },
+        },
+    }),
+    (0, swagger_1.ApiBadRequestResponse)({
+        description: 'Invalid reset token, expired token, or password confirmation mismatch',
+    }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "resetPassword", null);
 __decorate([
     (0, common_1.Post)('logout'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),

@@ -72,7 +72,21 @@ let UsersService = class UsersService {
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        user.name = updateProfileDto.name;
+        if (updateProfileDto.name !== undefined) {
+            user.name = updateProfileDto.name;
+        }
+        if (updateProfileDto.gender !== undefined) {
+            user.gender = updateProfileDto.gender;
+        }
+        if (updateProfileDto.dob !== undefined) {
+            user.dob = new Date(updateProfileDto.dob);
+        }
+        if (updateProfileDto.mobileNumber !== undefined) {
+            user.mobileNumber = updateProfileDto.mobileNumber;
+        }
+        if (updateProfileDto.relationshipStatus !== undefined) {
+            user.relationshipStatus = updateProfileDto.relationshipStatus;
+        }
         const savedUser = await this.usersRepository.save(user);
         const { password, ...safeUser } = savedUser;
         return safeUser;

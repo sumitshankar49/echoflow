@@ -33,6 +33,12 @@ export default () => ({
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
   },
+  mail: {
+    resendApiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.MAIL_FROM,
+    resetPasswordUrl:
+      process.env.FRONTEND_RESET_PASSWORD_URL ?? 'http://localhost:3000/reset-password',
+  },
   swagger: {
     enabled: toBoolean(process.env.SWAGGER_ENABLED, true),
     path: process.env.SWAGGER_PATH ?? 'api/docs',

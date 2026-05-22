@@ -3,19 +3,24 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { randomBytes, createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import type { StringValue } from 'ms';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { LessThan, Repository } from 'typeorm';
+import { IsNull, LessThan, MoreThan, Repository } from 'typeorm';
 
 import { User } from '../../database/entities/user.entity';
+import { MailService } from '../mail/mail.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RevokedToken } from './entities/revoked-token.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 export interface JwtPayload {
   sub: string;
@@ -34,6 +39,14 @@ export interface LogoutResponse {
   message: string;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -41,8 +54,11 @@ export class AuthService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(RevokedToken)
     private readonly revokedTokensRepository: Repository<RevokedToken>,
+    @InjectRepository(PasswordResetToken)
+    private readonly passwordResetTokensRepository: Repository<PasswordResetToken>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
@@ -140,6 +156,92 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<ForgotPasswordResponse> {
+    const genericResponse = {
+      message: 'If an account with that email exists, a reset link has been sent.',
+    };
+
+    const normalizedEmail = forgotPasswordDto.email.toLowerCase();
+    const user = await this.usersRepository.findOne({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!user) {
+      return genericResponse;
+    }
+
+    await this.passwordResetTokensRepository.delete({
+      userId: user.id,
+      usedAt: IsNull(),
+    });
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    const passwordResetToken = this.passwordResetTokensRepository.create({
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+      usedAt: null,
+    });
+
+    await this.passwordResetTokensRepository.save(passwordResetToken);
+
+    const resetPasswordUrl = this.configService.getOrThrow<string>('mail.resetPasswordUrl');
+    const resetUrl = `${resetPasswordUrl}?token=${encodeURIComponent(rawToken)}`;
+
+    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
+
+    return genericResponse;
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<ResetPasswordResponse> {
+    if (resetPasswordDto.newPassword !== resetPasswordDto.confirmPassword) {
+      throw new BadRequestException('New password and confirm password do not match');
+    }
+
+    const tokenHash = this.hashToken(resetPasswordDto.token);
+    const resetToken = await this.passwordResetTokensRepository.findOne({
+      where: {
+        tokenHash,
+        usedAt: IsNull(),
+        expiresAt: MoreThan(new Date()),
+      },
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: resetToken.userId },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    user.password = await bcrypt.hash(resetPasswordDto.newPassword, 12);
+    await this.usersRepository.save(user);
+
+    resetToken.usedAt = new Date();
+    await this.passwordResetTokensRepository.save(resetToken);
+
+    return { message: 'Password reset successfully' };
+  }
+
   async logout(refreshTokenDto: RefreshTokenDto): Promise<LogoutResponse> {
     const refreshSecret = this.configService.getOrThrow<string>('jwt.refreshSecret');
 
@@ -170,6 +272,13 @@ export class AuthService {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async cleanupExpiredRevokedTokens(): Promise<void> {
     await this.revokedTokensRepository.delete({
+      expiresAt: LessThan(new Date()),
+    });
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async cleanupExpiredPasswordResetTokens(): Promise<void> {
+    await this.passwordResetTokensRepository.delete({
       expiresAt: LessThan(new Date()),
     });
   }
@@ -217,5 +326,9 @@ export class AuthService {
     ]);
 
     return { accessToken, refreshToken };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
   }
 }

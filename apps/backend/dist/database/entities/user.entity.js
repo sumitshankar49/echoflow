@@ -31,6 +31,22 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "gender", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'date', nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "dob", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 20, nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "mobileNumber", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 30, nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "relationshipStatus", void 0);
+__decorate([
     (0, typeorm_1.CreateDateColumn)({ type: 'timestamp' }),
     __metadata("design:type", Date)
 ], User.prototype, "createdAt", void 0);

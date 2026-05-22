@@ -20,6 +20,11 @@ declare const _default: () => {
         refreshSecret: string | undefined;
         refreshExpiresIn: string;
     };
+    mail: {
+        resendApiKey: string | undefined;
+        fromEmail: string | undefined;
+        resetPasswordUrl: string;
+    };
     swagger: {
         enabled: boolean;
         path: string;
