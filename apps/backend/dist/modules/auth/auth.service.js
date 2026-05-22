@@ -51,11 +51,14 @@ const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const typeorm_1 = require("@nestjs/typeorm");
 const bcrypt = __importStar(require("bcryptjs"));
+const schedule_1 = require("@nestjs/schedule");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../../database/entities/user.entity");
+const revoked_token_entity_1 = require("./entities/revoked-token.entity");
 let AuthService = class AuthService {
-    constructor(usersRepository, jwtService, configService) {
+    constructor(usersRepository, revokedTokensRepository, jwtService, configService) {
         this.usersRepository = usersRepository;
+        this.revokedTokensRepository = revokedTokensRepository;
         this.jwtService = jwtService;
         this.configService = configService;
     }
@@ -111,6 +114,12 @@ let AuthService = class AuthService {
         if (payload.tokenType !== 'refresh') {
             throw new common_1.UnauthorizedException('Invalid token type');
         }
+        const isRevoked = await this.revokedTokensRepository.findOne({
+            where: { token: refreshTokenDto.refreshToken },
+        });
+        if (isRevoked) {
+            throw new common_1.UnauthorizedException('Token has been revoked');
+        }
         const user = await this.usersRepository.findOne({
             where: { id: payload.sub },
             select: {
@@ -126,8 +135,39 @@ let AuthService = class AuthService {
         }
         return this.generateTokens(user);
     }
-    async logout(_refreshTokenDto) {
+    async logout(refreshTokenDto) {
+        const refreshSecret = this.configService.getOrThrow('jwt.refreshSecret');
+        try {
+            const payload = await this.jwtService.verifyAsync(refreshTokenDto.refreshToken, { secret: refreshSecret });
+            const existing = await this.revokedTokensRepository.findOne({
+                where: { token: refreshTokenDto.refreshToken },
+            });
+            if (!existing) {
+                const revokedToken = this.revokedTokensRepository.create({
+                    token: refreshTokenDto.refreshToken,
+                    expiresAt: new Date(payload.exp * 1000),
+                });
+                await this.revokedTokensRepository.save(revokedToken);
+            }
+        }
+        catch {
+        }
         return { message: 'Logged out successfully' };
+    }
+    async cleanupExpiredRevokedTokens() {
+        await this.revokedTokensRepository.delete({
+            expiresAt: (0, typeorm_2.LessThan)(new Date()),
+        });
+    }
+    async getMe(userId) {
+        const user = await this.usersRepository.findOne({
+            where: { id: userId },
+        });
+        if (!user) {
+            throw new common_1.UnauthorizedException('User no longer exists');
+        }
+        const { password, ...safeUser } = user;
+        return safeUser;
     }
     async generateTokens(user) {
         const accessSecret = this.configService.getOrThrow('jwt.accessSecret');
@@ -153,10 +193,18 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
+__decorate([
+    (0, schedule_1.Cron)(schedule_1.CronExpression.EVERY_DAY_AT_MIDNIGHT),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AuthService.prototype, "cleanupExpiredRevokedTokens", null);
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __param(1, (0, typeorm_1.InjectRepository)(revoked_token_entity_1.RevokedToken)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         jwt_1.JwtService,
         config_1.ConfigService])
 ], AuthService);

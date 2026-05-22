@@ -18,6 +18,7 @@ const swagger_1 = require("@nestjs/swagger");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const create_reminder_dto_1 = require("./dto/create-reminder.dto");
+const reminder_filter_dto_1 = require("./dto/reminder-filter.dto");
 const update_reminder_dto_1 = require("./dto/update-reminder.dto");
 const reminder_entity_1 = require("./entities/reminder.entity");
 const reminders_service_1 = require("./reminders.service");
@@ -25,11 +26,14 @@ let RemindersController = class RemindersController {
     constructor(remindersService) {
         this.remindersService = remindersService;
     }
-    findAll(currentUser) {
-        return this.remindersService.findAll(currentUser);
+    findAll(filter, currentUser) {
+        return this.remindersService.findAll(currentUser, filter);
     }
     create(createReminderDto, currentUser) {
         return this.remindersService.create(createReminderDto, currentUser);
+    }
+    findOne(id, currentUser) {
+        return this.remindersService.findOne(id, currentUser);
     }
     update(id, updateReminderDto, currentUser) {
         return this.remindersService.update(id, updateReminderDto, currentUser);
@@ -42,10 +46,19 @@ exports.RemindersController = RemindersController;
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get reminders for current user' }),
-    (0, swagger_1.ApiOkResponse)({ description: 'Reminders fetched successfully', type: reminder_entity_1.Reminder, isArray: true }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    (0, swagger_1.ApiQuery)({ name: 'isCompleted', required: false, description: 'Filter by completion status', example: false }),
+    (0, swagger_1.ApiQuery)({ name: 'from', required: false, description: 'Filter reminders from this date (inclusive)', example: '2026-05-01' }),
+    (0, swagger_1.ApiQuery)({ name: 'to', required: false, description: 'Filter reminders up to this date (inclusive)', example: '2026-05-31' }),
+    (0, swagger_1.ApiQuery)({ name: 'page', required: false, description: 'Page number', example: 1 }),
+    (0, swagger_1.ApiQuery)({ name: 'limit', required: false, description: 'Items per page (max 100)', example: 20 }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Paginated reminders',
+        schema: { example: { data: [], total: 0, page: 1, totalPages: 0 } },
+    }),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [reminder_filter_dto_1.ReminderFilterDto, Object]),
     __metadata("design:returntype", Promise)
 ], RemindersController.prototype, "findAll", null);
 __decorate([
@@ -59,6 +72,17 @@ __decorate([
     __metadata("design:paramtypes", [create_reminder_dto_1.CreateReminderDto, Object]),
     __metadata("design:returntype", Promise)
 ], RemindersController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get a single reminder by id' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Reminder UUID' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Reminder fetched successfully', type: reminder_entity_1.Reminder }),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], RemindersController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Update reminder by id' }),

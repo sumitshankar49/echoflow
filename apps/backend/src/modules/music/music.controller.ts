@@ -1,10 +1,15 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -14,6 +19,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -24,8 +30,11 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
+import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Playlist } from './entities/playlist.entity';
 import { MusicService } from './music.service';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Music')
 @ApiBearerAuth('access-token')
@@ -37,9 +46,17 @@ export class MusicController {
 
   @Get()
   @ApiOperation({ summary: 'Get playlists for current user' })
-  @ApiOkResponse({ description: 'Playlists fetched successfully', type: Playlist, isArray: true })
-  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Playlist[]> {
-    return this.musicService.findAll(currentUser);
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max 100)', example: 20 })
+  @ApiOkResponse({
+    description: 'Paginated playlists',
+    schema: { example: { data: [], total: 0, page: 1, totalPages: 0 } },
+  })
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResponseDto<Playlist>> {
+    return this.musicService.findAll(currentUser, pagination);
   }
 
   @Post()
@@ -62,5 +79,33 @@ export class MusicController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<Playlist> {
     return this.musicService.findOne(id, currentUser);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update playlist by id' })
+  @ApiParam({ name: 'id', description: 'Playlist UUID' })
+  @ApiBody({ type: UpdatePlaylistDto })
+  @ApiOkResponse({ description: 'Playlist updated successfully', type: Playlist })
+  update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updatePlaylistDto: UpdatePlaylistDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<Playlist> {
+    return this.musicService.update(id, updatePlaylistDto, currentUser);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete playlist by id' })
+  @ApiParam({ name: 'id', description: 'Playlist UUID' })
+  @ApiOkResponse({
+    description: 'Playlist deleted successfully',
+    schema: { example: { message: 'Playlist deleted successfully' } },
+  })
+  remove(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.musicService.remove(id, currentUser);
   }
 }

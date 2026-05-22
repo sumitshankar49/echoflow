@@ -30,9 +30,11 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreateNoteDto } from './dto/create-note.dto';
+import { NoteFilterDto } from './dto/note-filter.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { Note } from './entities/note.entity';
 import { NotesService } from './notes.service';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
 @ApiTags('Notes')
 @ApiBearerAuth('access-token')
@@ -44,9 +46,19 @@ export class NotesController {
 
   @Get()
   @ApiOperation({ summary: 'Get all notes for current user' })
-  @ApiOkResponse({ description: 'Notes fetched successfully', type: Note, isArray: true })
-  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Note[]> {
-    return this.notesService.findAll(currentUser);
+  @ApiQuery({ name: 'isFavorite', required: false, description: 'Filter by favourite status', example: true })
+  @ApiQuery({ name: 'tag', required: false, description: 'Filter notes containing this tag', example: 'work' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max 100)', example: 20 })
+  @ApiOkResponse({
+    description: 'Paginated notes',
+    schema: { example: { data: [], total: 0, page: 1, totalPages: 0 } },
+  })
+  findAll(
+    @Query() filter: NoteFilterDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResponseDto<Note>> {
+    return this.notesService.findAll(currentUser, filter);
   }
 
   @Post()

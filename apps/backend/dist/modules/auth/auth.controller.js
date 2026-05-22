@@ -15,13 +15,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const throttler_1 = require("@nestjs/throttler");
 const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 const register_dto_1 = require("./dto/register.dto");
+const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
+const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
+    }
+    getMe(currentUser) {
+        return this.authService.getMe(currentUser.userId);
     }
     register(registerDto) {
         return this.authService.register(registerDto);
@@ -37,6 +43,29 @@ let AuthController = class AuthController {
     }
 };
 exports.AuthController = AuthController;
+__decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, swagger_1.ApiBearerAuth)('access-token'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get current authenticated user profile' }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Current user profile',
+        schema: {
+            example: {
+                id: 'b0525fae-31d6-4890-baed-caf96d2ff97a',
+                name: 'Candy User',
+                email: 'candy@example.com',
+                createdAt: '2026-05-21T10:00:00.000Z',
+                updatedAt: '2026-05-21T10:00:00.000Z',
+            },
+        },
+    }),
+    (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Missing or invalid access token' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getMe", null);
 __decorate([
     (0, common_1.Post)('register'),
     (0, swagger_1.ApiOperation)({ summary: 'Register a new account' }),
@@ -56,6 +85,7 @@ __decorate([
     (0, swagger_1.ApiBadRequestResponse)({
         description: 'Validation failed or email already exists',
     }),
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
@@ -77,6 +107,7 @@ __decorate([
         },
     }),
     (0, swagger_1.ApiUnauthorizedResponse)({ description: 'Invalid credentials' }),
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [login_dto_1.LoginDto]),

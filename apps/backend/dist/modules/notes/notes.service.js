@@ -16,6 +16,7 @@ exports.NotesService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const paginated_response_dto_1 = require("../../common/dto/paginated-response.dto");
 const note_entity_1 = require("./entities/note.entity");
 let NotesService = class NotesService {
     constructor(notesRepository) {
@@ -29,16 +30,34 @@ let NotesService = class NotesService {
         });
         return this.notesRepository.save(note);
     }
-    async findAll(currentUser) {
-        return this.notesRepository.find({
-            where: { userId: currentUser.userId },
-            order: { updatedAt: 'DESC' },
-        });
+    async findAll(currentUser, filter) {
+        const page = filter?.page ?? 1;
+        const limit = filter?.limit ?? 20;
+        const skip = (page - 1) * limit;
+        const qb = this.notesRepository
+            .createQueryBuilder('note')
+            .where('note.userId = :userId', { userId: currentUser.userId });
+        if (filter?.isFavorite !== undefined) {
+            qb.andWhere('note.isFavorite = :isFavorite', { isFavorite: filter.isFavorite });
+        }
+        if (filter?.tag) {
+            qb.andWhere('FIND_IN_SET(:tag, note.tags) > 0', { tag: filter.tag.trim() });
+        }
+        const [data, total] = await qb
+            .orderBy('note.updatedAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount();
+        return new paginated_response_dto_1.PaginatedResponseDto(data, total, page, limit);
     }
     async search(query, currentUser) {
         const normalizedQuery = query.trim().toLowerCase();
         if (!normalizedQuery) {
-            return this.findAll(currentUser);
+            return this.notesRepository
+                .createQueryBuilder('note')
+                .where('note.userId = :userId', { userId: currentUser.userId })
+                .orderBy('note.updatedAt', 'DESC')
+                .getMany();
         }
         return this.notesRepository
             .createQueryBuilder('note')

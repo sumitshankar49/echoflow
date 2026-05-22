@@ -13,6 +13,9 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
+const core_1 = require("@nestjs/core");
+const schedule_1 = require("@nestjs/schedule");
+const throttler_1 = require("@nestjs/throttler");
 const typeorm_1 = require("@nestjs/typeorm");
 const app_controller_1 = require("./app.controller");
 const configuration_1 = __importDefault(require("./config/configuration"));
@@ -21,6 +24,7 @@ const circles_module_1 = require("./modules/circles/circles.module");
 const music_module_1 = require("./modules/music/music.module");
 const notes_module_1 = require("./modules/notes/notes.module");
 const reminders_module_1 = require("./modules/reminders/reminders.module");
+const users_module_1 = require("./modules/users/users.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -34,6 +38,13 @@ exports.AppModule = AppModule = __decorate([
                 load: [configuration_1.default],
                 envFilePath: ['.env.local', '.env'],
             }),
+            schedule_1.ScheduleModule.forRoot(),
+            throttler_1.ThrottlerModule.forRoot([
+                {
+                    ttl: 60000,
+                    limit: 100,
+                },
+            ]),
             jwt_1.JwtModule.registerAsync({
                 global: true,
                 inject: [config_1.ConfigService],
@@ -63,8 +74,15 @@ exports.AppModule = AppModule = __decorate([
             music_module_1.MusicModule,
             notes_module_1.NotesModule,
             reminders_module_1.RemindersModule,
+            users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],
+        providers: [
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard,
+            },
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

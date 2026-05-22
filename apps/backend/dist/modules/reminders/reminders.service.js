@@ -16,6 +16,7 @@ exports.RemindersService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const paginated_response_dto_1 = require("../../common/dto/paginated-response.dto");
 const reminder_entity_1 = require("./entities/reminder.entity");
 let RemindersService = class RemindersService {
     constructor(remindersRepository) {
@@ -31,11 +32,30 @@ let RemindersService = class RemindersService {
         });
         return this.remindersRepository.save(reminder);
     }
-    async findAll(currentUser) {
-        return this.remindersRepository.find({
-            where: { userId: currentUser.userId },
-            order: { remindAt: 'ASC' },
-        });
+    async findAll(currentUser, filter) {
+        const page = filter?.page ?? 1;
+        const limit = filter?.limit ?? 20;
+        const skip = (page - 1) * limit;
+        const qb = this.remindersRepository
+            .createQueryBuilder('reminder')
+            .where('reminder.userId = :userId', { userId: currentUser.userId });
+        if (filter?.isCompleted !== undefined) {
+            qb.andWhere('reminder.isCompleted = :isCompleted', { isCompleted: filter.isCompleted });
+        }
+        if (filter?.from) {
+            qb.andWhere('reminder.remindAt >= :from', { from: new Date(filter.from) });
+        }
+        if (filter?.to) {
+            const toDate = new Date(filter.to);
+            toDate.setUTCDate(toDate.getUTCDate() + 1);
+            qb.andWhere('reminder.remindAt < :to', { to: toDate });
+        }
+        const [data, total] = await qb
+            .orderBy('reminder.remindAt', 'ASC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount();
+        return new paginated_response_dto_1.PaginatedResponseDto(data, total, page, limit);
     }
     async findOne(id, currentUser) {
         const reminder = await this.remindersRepository.findOne({

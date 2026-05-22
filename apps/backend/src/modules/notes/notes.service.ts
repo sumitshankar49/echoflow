@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { CreateNoteDto } from './dto/create-note.dto';
+import { NoteFilterDto } from './dto/note-filter.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { Note } from './entities/note.entity';
 
@@ -24,18 +26,41 @@ export class NotesService {
     return this.notesRepository.save(note);
   }
 
-  async findAll(currentUser: AuthenticatedUser): Promise<Note[]> {
-    return this.notesRepository.find({
-      where: { userId: currentUser.userId },
-      order: { updatedAt: 'DESC' },
-    });
+  async findAll(currentUser: AuthenticatedUser, filter?: NoteFilterDto): Promise<PaginatedResponseDto<Note>> {
+    const page = filter?.page ?? 1;
+    const limit = filter?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const qb = this.notesRepository
+      .createQueryBuilder('note')
+      .where('note.userId = :userId', { userId: currentUser.userId });
+
+    if (filter?.isFavorite !== undefined) {
+      qb.andWhere('note.isFavorite = :isFavorite', { isFavorite: filter.isFavorite });
+    }
+
+    if (filter?.tag) {
+      qb.andWhere('FIND_IN_SET(:tag, note.tags) > 0', { tag: filter.tag.trim() });
+    }
+
+    const [data, total] = await qb
+      .orderBy('note.updatedAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return new PaginatedResponseDto(data, total, page, limit);
   }
 
   async search(query: string, currentUser: AuthenticatedUser): Promise<Note[]> {
     const normalizedQuery = query.trim().toLowerCase();
 
     if (!normalizedQuery) {
-      return this.findAll(currentUser);
+      return this.notesRepository
+        .createQueryBuilder('note')
+        .where('note.userId = :userId', { userId: currentUser.userId })
+        .orderBy('note.updatedAt', 'DESC')
+        .getMany();
     }
 
     return this.notesRepository

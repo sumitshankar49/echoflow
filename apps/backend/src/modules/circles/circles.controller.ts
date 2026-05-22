@@ -1,19 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -26,8 +33,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CirclesService } from './circles.service';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
+import { UpdateCircleDto } from './dto/update-circle.dto';
 import { CircleMember } from './entities/circle-member.entity';
 import { Circle } from './entities/circle.entity';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Circles')
 @ApiBearerAuth('access-token')
@@ -39,9 +49,17 @@ export class CirclesController {
 
   @Get()
   @ApiOperation({ summary: 'Get circles for current user' })
-  @ApiOkResponse({ description: 'Circles fetched successfully', type: Circle, isArray: true })
-  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Circle[]> {
-    return this.circlesService.findAll(currentUser);
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max 100)', example: 20 })
+  @ApiOkResponse({
+    description: 'Paginated circles',
+    schema: { example: { data: [], total: 0, page: 1, totalPages: 0 } },
+  })
+  findAll(
+    @Query() pagination: PaginationQueryDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResponseDto<Circle>> {
+    return this.circlesService.findAll(currentUser, pagination);
   }
 
   @Post()
@@ -64,6 +82,93 @@ export class CirclesController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<Circle> {
     return this.circlesService.findOne(id, currentUser);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update circle name or description' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiBody({ type: UpdateCircleDto })
+  @ApiOkResponse({ description: 'Circle updated successfully', type: Circle })
+  update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateCircleDto: UpdateCircleDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<Circle> {
+    return this.circlesService.update(id, updateCircleDto, currentUser);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a circle by id' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiOkResponse({
+    description: 'Circle deleted successfully',
+    schema: { example: { message: 'Circle deleted successfully' } },
+  })
+  remove(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.circlesService.remove(id, currentUser);
+  }
+
+  @Patch(':id/invitations/accept')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Accept an invitation to a circle' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiOkResponse({ description: 'Invitation accepted', type: CircleMember })
+  acceptInvitation(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<CircleMember> {
+    return this.circlesService.acceptInvitation(id, currentUser);
+  }
+
+  @Patch(':id/invitations/decline')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Decline an invitation to a circle' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiOkResponse({
+    description: 'Invitation declined',
+    schema: { example: { message: 'Invitation declined' } },
+  })
+  declineInvitation(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.circlesService.declineInvitation(id, currentUser);
+  }
+
+  @Delete(':id/members/:memberId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a member from a circle (owner only)' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiParam({ name: 'memberId', description: 'CircleMember UUID' })
+  @ApiOkResponse({
+    description: 'Member removed successfully',
+    schema: { example: { message: 'Member removed successfully' } },
+  })
+  removeMember(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('memberId', new ParseUUIDPipe()) memberId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.circlesService.removeMember(id, memberId, currentUser);
+  }
+
+  @Post(':id/leave')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Leave a circle (non-owner members only)' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiOkResponse({
+    description: 'Left the circle successfully',
+    schema: { example: { message: 'You have left the circle' } },
+  })
+  leaveCircle(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.circlesService.leaveCircle(id, currentUser);
   }
 
   @Post(':id/invite')

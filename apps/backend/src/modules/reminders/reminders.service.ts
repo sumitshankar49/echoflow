@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { CreateReminderDto } from './dto/create-reminder.dto';
+import { ReminderFilterDto } from './dto/reminder-filter.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
 import { Reminder } from './entities/reminder.entity';
 
@@ -29,11 +31,37 @@ export class RemindersService {
     return this.remindersRepository.save(reminder);
   }
 
-  async findAll(currentUser: AuthenticatedUser): Promise<Reminder[]> {
-    return this.remindersRepository.find({
-      where: { userId: currentUser.userId },
-      order: { remindAt: 'ASC' },
-    });
+  async findAll(currentUser: AuthenticatedUser, filter?: ReminderFilterDto): Promise<PaginatedResponseDto<Reminder>> {
+    const page = filter?.page ?? 1;
+    const limit = filter?.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const qb = this.remindersRepository
+      .createQueryBuilder('reminder')
+      .where('reminder.userId = :userId', { userId: currentUser.userId });
+
+    if (filter?.isCompleted !== undefined) {
+      qb.andWhere('reminder.isCompleted = :isCompleted', { isCompleted: filter.isCompleted });
+    }
+
+    if (filter?.from) {
+      qb.andWhere('reminder.remindAt >= :from', { from: new Date(filter.from) });
+    }
+
+    if (filter?.to) {
+      // Include the full end day by moving to the start of the next day
+      const toDate = new Date(filter.to);
+      toDate.setUTCDate(toDate.getUTCDate() + 1);
+      qb.andWhere('reminder.remindAt < :to', { to: toDate });
+    }
+
+    const [data, total] = await qb
+      .orderBy('reminder.remindAt', 'ASC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
+
+    return new PaginatedResponseDto(data, total, page, limit);
   }
 
   async findOne(id: string, currentUser: AuthenticatedUser): Promise<Reminder> {

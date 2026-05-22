@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,6 +19,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -28,9 +30,11 @@ import {
 } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreateReminderDto } from './dto/create-reminder.dto';
+import { ReminderFilterDto } from './dto/reminder-filter.dto';
 import { UpdateReminderDto } from './dto/update-reminder.dto';
 import { Reminder } from './entities/reminder.entity';
 import { RemindersService } from './reminders.service';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 
 @ApiTags('Reminders')
 @ApiBearerAuth('access-token')
@@ -42,9 +46,20 @@ export class RemindersController {
 
   @Get()
   @ApiOperation({ summary: 'Get reminders for current user' })
-  @ApiOkResponse({ description: 'Reminders fetched successfully', type: Reminder, isArray: true })
-  findAll(@CurrentUser() currentUser: AuthenticatedUser): Promise<Reminder[]> {
-    return this.remindersService.findAll(currentUser);
+  @ApiQuery({ name: 'isCompleted', required: false, description: 'Filter by completion status', example: false })
+  @ApiQuery({ name: 'from', required: false, description: 'Filter reminders from this date (inclusive)', example: '2026-05-01' })
+  @ApiQuery({ name: 'to', required: false, description: 'Filter reminders up to this date (inclusive)', example: '2026-05-31' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (max 100)', example: 20 })
+  @ApiOkResponse({
+    description: 'Paginated reminders',
+    schema: { example: { data: [], total: 0, page: 1, totalPages: 0 } },
+  })
+  findAll(
+    @Query() filter: ReminderFilterDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<PaginatedResponseDto<Reminder>> {
+    return this.remindersService.findAll(currentUser, filter);
   }
 
   @Post()
@@ -56,6 +71,17 @@ export class RemindersController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<Reminder> {
     return this.remindersService.create(createReminderDto, currentUser);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single reminder by id' })
+  @ApiParam({ name: 'id', description: 'Reminder UUID' })
+  @ApiOkResponse({ description: 'Reminder fetched successfully', type: Reminder })
+  findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<Reminder> {
+    return this.remindersService.findOne(id, currentUser);
   }
 
   @Patch(':id')
