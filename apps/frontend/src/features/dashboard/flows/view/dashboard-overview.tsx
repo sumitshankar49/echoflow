@@ -206,7 +206,7 @@ export function DashboardOverview() {
       suggestions.push({
         id: "reminder-focus",
         title: "Prep your next reminder block",
-        description: `${topReminders.length} reminder(s) are lined up. Quick-check due times before your next deep work sprint.`,
+        description: `${topReminders.length} reminder(s) pending. Stay on track without missing key tasks.`,
         href: "/reminders",
       });
     }
@@ -461,12 +461,15 @@ export function DashboardOverview() {
               </h2>
             </div>
             <div className="rounded-full border border-cyan-300/35 bg-cyan-300/10 px-3 py-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">
-              {topReminders.length} task{topReminders.length === 1 ? "" : "s"} queued
+              {topReminders.length} task{topReminders.length === 1 ? "" : "s"}{" "}
+              queued
             </div>
           </div>
 
           <div className="mt-4 space-y-2 rounded-2xl border border-border/70 bg-background/70 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Right now</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              Right now
+            </p>
             <p className="text-sm text-foreground/90">
               {topReminders[0]
                 ? `Next reminder: ${topReminders[0].title}`
@@ -889,7 +892,6 @@ export function DashboardOverview() {
             </motion.div>
           </motion.div>
         ) : null}
-
       </AnimatePresence>
     </div>
   );
