@@ -1,17 +1,512 @@
 'use client';
 
+import Link from 'next/link';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AnimatePresence, motion } from 'framer-motion';
+import type { AxiosError } from 'axios';
+import {
+  ArrowLeft,
+  Check,
+  Clock3,
+  Copy,
+  Mail,
+  MessageSquare,
+  Shield,
+  Sparkles,
+  UserMinus,
+  Users,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { circlesService } from '../../../shared/data/circles.service';
 import { useCircleDetail } from './use-circle-detail';
+import { circlesQueryKeys } from '../../../shared/data/circles.query-keys';
+import { usersQueryKeys } from '@/features/users/shared/data/users.query-keys';
+import { usersService } from '@/features/users/shared/data/users.service';
+import { notesService } from '@/features/notes/shared/data/notes.service';
+
+function initials(name: string) {
+  const values = name.trim().split(/\s+/).filter(Boolean);
+  if (!values.length) {
+    return 'CC';
+  }
+
+  return values.slice(0, 2).map((value) => value[0]?.toUpperCase() ?? '').join('');
+}
+
+function formatDate(value?: string) {
+  if (!value) {
+    return 'Just now';
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  });
+}
+
+const gradients = [
+  'from-rose-500/85 via-orange-400/75 to-amber-300/65',
+  'from-teal-500/85 via-emerald-400/70 to-cyan-300/70',
+  'from-sky-600/85 via-indigo-500/75 to-cyan-300/70',
+  'from-fuchsia-500/75 via-rose-400/70 to-orange-300/70',
+  'from-slate-900 via-indigo-700/85 to-teal-400/70',
+];
+
+function gradientFor(value: string) {
+  const hash = Array.from(value).reduce((total, character) => total + character.charCodeAt(0), 0);
+  return gradients[hash % gradients.length];
+}
 
 export function CircleDetailView({ id }: { id: string }) {
+  const queryClient = useQueryClient();
   const { data: circle, isPending, isError } = useCircleDetail(id);
+  const { data: me } = useQuery({ queryKey: usersQueryKeys.me(), queryFn: usersService.getMe });
+  const { data: notes = [] } = useQuery({ queryKey: ['notes', 'list'], queryFn: notesService.list });
+
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  function getInviteErrorMessage(error: unknown) {
+    const maybeAxiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
+    const status = maybeAxiosError?.response?.status;
+    const rawMessage = maybeAxiosError?.response?.data?.message;
+    const message = Array.isArray(rawMessage) ? rawMessage.join(', ') : rawMessage;
+
+    if (status === 404 && message?.toLowerCase().includes('email')) {
+      return 'No account found for this email yet. Share the invite link so they can join after sign up.';
+    }
+
+    return message || 'Unable to send invitation';
+  }
+
+  const inviteMutation = useMutation({
+    mutationFn: (email: string) => circlesService.invite(id, { email }),
+    onSuccess: async (response) => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.detail(id) });
+
+      if (response?.message) {
+        toast.info(response.message);
+      } else {
+        toast.success('Invitation sent');
+      }
+
+      setInviteEmail('');
+    },
+    onError: (error) => {
+      toast.error(getInviteErrorMessage(error));
+    },
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: () => circlesService.acceptInvitation(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.detail(id) });
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.list() });
+      toast.success('Invitation accepted');
+    },
+    onError: () => toast.error('Unable to accept invitation'),
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: () => circlesService.declineInvitation(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.list() });
+      toast.success('Invitation declined');
+      window.location.replace('/circles');
+    },
+    onError: () => toast.error('Unable to decline invitation'),
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: () => circlesService.leaveCircle(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.list() });
+      toast.success('You left this circle');
+      window.location.replace('/circles');
+    },
+    onError: () => toast.error('Unable to leave circle'),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (memberId: string) => circlesService.removeMember(id, memberId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.detail(id) });
+      toast.success('Member removed');
+    },
+    onError: () => toast.error('Unable to remove member'),
+  });
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (isError) return <p className="text-sm text-red-500">Circle not found.</p>;
 
+  const members = circle.members ?? [];
+  const acceptedMembers = members.filter((member) => member.status === 'accepted');
+  const invitedMembers = members.filter((member) => member.status === 'invited');
+  const myMembership = members.find((member) => member.userId === me?.id);
+  const isOwner = circle.ownerId === me?.id;
+  const isInvited = !isOwner && myMembership?.status === 'invited';
+
+  const inviteLink = typeof window !== 'undefined'
+    ? `${window.location.origin}/circles/${circle.id}?invite=true`
+    : `/circles/${circle.id}?invite=true`;
+
+  const sharedNotes = notes.slice(0, 5);
+
+  const activityItems: Array<{ id: string; title: string; subtitle: string; time: string }> = [
+    {
+      id: `created-${circle.id}`,
+      title: `${circle.name} was created`,
+      subtitle: 'Circle space is ready for collaboration',
+      time: circle.createdAt,
+    },
+    ...invitedMembers.map((member) => ({
+      id: `invite-${member.id}`,
+      title: `Invitation sent to ${member.user?.name || member.user?.email || 'member'}`,
+      subtitle: 'Pending acceptance',
+      time: member.updatedAt || member.createdAt || circle.createdAt,
+    })),
+    ...acceptedMembers.map((member) => ({
+      id: `join-${member.id}`,
+      title: `${member.user?.name || 'A member'} joined this circle`,
+      subtitle: member.role === 'owner' ? 'Owner is active' : 'Ready to collaborate',
+      time: member.updatedAt || member.createdAt || circle.createdAt,
+    })),
+    ...sharedNotes.map((note) => ({
+      id: `note-${note.id}`,
+      title: `Shared note: ${note.title}`,
+      subtitle: 'Recently updated in your workspace',
+      time: note.updatedAt,
+    })),
+  ]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+    .slice(0, 8);
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">{circle.name}</h1>
-      {circle.description && <p className="text-sm text-muted-foreground">{circle.description}</p>}
+    <div className="relative mx-auto w-full max-w-[1400px] space-y-8 pb-12">
+      <div className="absolute inset-x-0 top-0 -z-10 h-[24rem] rounded-[2.6rem] bg-[radial-gradient(circle_at_top_left,rgba(251,113,133,0.24),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(45,212,191,0.2),transparent_34%),linear-gradient(140deg,rgba(17,24,39,0.97),rgba(30,41,59,0.9),rgba(15,118,110,0.72))]" />
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_370px]">
+        <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/85 p-6 text-white shadow-[0_24px_70px_-40px_rgba(15,23,42,0.82)] backdrop-blur-xl sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link
+              href="/circles"
+              className={cn(buttonVariants({ variant: 'ghost' }), 'rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to circles
+            </Link>
+            <Badge className="rounded-full border border-white/20 bg-black/20 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-white">
+              {isOwner ? 'Owner view' : 'Member view'}
+            </Badge>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <div className={cn('relative aspect-square overflow-hidden rounded-[1.8rem] bg-gradient-to-br', gradientFor(circle.id))}>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/12 via-transparent to-black/40" />
+              <div className="absolute bottom-4 left-4 right-4 rounded-[1.2rem] border border-white/15 bg-black/25 p-3 backdrop-blur-md">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/60">Circle</p>
+                <p className="mt-1 text-2xl font-semibold">{circle.name}</p>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <h1 className="text-4xl font-semibold tracking-tight">{circle.name}</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
+                  {circle.description || 'A warm collaborative space for plans, notes, and shared progress.'}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">Members</p>
+                  <p className="mt-2 text-3xl font-semibold">{Math.max(acceptedMembers.length, 1)}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">Pending</p>
+                  <p className="mt-2 text-3xl font-semibold">{invitedMembers.length}</p>
+                </div>
+                <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">Shared notes</p>
+                  <p className="mt-2 text-3xl font-semibold">{sharedNotes.length}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <AvatarGroup>
+                  {(acceptedMembers.length ? acceptedMembers : [{ id: 'owner-fallback', user: me } as any])
+                    .slice(0, 4)
+                    .map((member) => (
+                      <Avatar key={member.id}>
+                        <AvatarFallback>{initials(member.user?.name || 'Circle Member')}</AvatarFallback>
+                      </Avatar>
+                    ))}
+                  {acceptedMembers.length > 4 ? <AvatarGroupCount>+{acceptedMembers.length - 4}</AvatarGroupCount> : null}
+                </AvatarGroup>
+
+                <Badge variant="outline" className="rounded-full border-white/20 bg-white/5 text-white">
+                  <Users className="mr-1.5 h-3.5 w-3.5" />
+                  {isOwner ? 'You manage this circle' : 'You are collaborating here'}
+                </Badge>
+              </div>
+
+              <AnimatePresence>
+                {isInvited ? (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="rounded-[1.4rem] border border-emerald-300/35 bg-emerald-300/10 p-4"
+                  >
+                    <p className="text-sm font-medium text-emerald-100">Invitation pending your response</p>
+                    <p className="mt-1 text-sm text-emerald-100/75">Accept to join the circle, or decline to remove this invitation.</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => acceptMutation.mutate()}
+                        disabled={acceptMutation.isPending}
+                        className="rounded-full bg-white text-emerald-950 hover:bg-emerald-50"
+                      >
+                        <Check className="h-4 w-4" />
+                        Accept
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => declineMutation.mutate()}
+                        disabled={declineMutation.isPending}
+                        className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                      >
+                        <X className="h-4 w-4" />
+                        Decline
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        <aside className="space-y-4">
+          <div className="rounded-[1.8rem] border border-white/10 bg-slate-950/85 p-5 text-white shadow-[0_20px_55px_-34px_rgba(15,23,42,0.8)] backdrop-blur-xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-teal-200/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-teal-100/80">
+              <Mail className="h-3.5 w-3.5" />
+              Invite flow
+            </div>
+
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight">Invite members beautifully</h2>
+            <p className="mt-2 text-sm leading-6 text-white/65">
+              Share a direct link or invite by email to bring your family or team together in one circle.
+            </p>
+            <p className="mt-1 text-xs text-white/55">
+              Email invites currently work for existing EchoFlow accounts. For new users, send the invite link.
+            </p>
+
+            {isOwner ? (
+              <div className="mt-5 space-y-4">
+                <div>
+                  <Label className="mb-2 block text-white/85">Email</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="member@team.com"
+                      className="h-11 rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => inviteMutation.mutate(inviteEmail.trim())}
+                      disabled={!inviteEmail.trim() || inviteMutation.isPending}
+                      className="h-11 rounded-2xl bg-white px-4 text-slate-950 hover:bg-emerald-50"
+                    >
+                      Send
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-2 block text-white/85">Invite link</Label>
+                  <div className="flex gap-2">
+                    <Input value={inviteLink} readOnly className="h-11 rounded-2xl border-white/10 bg-white/5 text-white" />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-2xl border-white/20 bg-white/5 text-white hover:bg-white/10"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(inviteLink);
+                          setCopied(true);
+                          toast.success('Invite link copied');
+                          window.setTimeout(() => setCopied(false), 1500);
+                        } catch {
+                          toast.error('Could not copy link');
+                        }
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                      {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
+                <p className="text-sm text-white/70">
+                  Only owners can invite new members. You can still collaborate and contribute inside this circle.
+                </p>
+              </div>
+            )}
+
+            {!isOwner && myMembership?.status === 'accepted' ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => leaveMutation.mutate()}
+                disabled={leaveMutation.isPending}
+                className="mt-4 w-full rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+              >
+                <UserMinus className="h-4 w-4" />
+                Leave circle
+              </Button>
+            ) : null}
+          </div>
+        </aside>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-4 rounded-[1.8rem] border border-border/70 bg-card/75 p-5 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)]">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Members</p>
+              <h3 className="mt-2 text-xl font-semibold">Circle roster</h3>
+            </div>
+            <Badge variant="outline" className="rounded-full">
+              {Math.max(acceptedMembers.length, 1)} active
+            </Badge>
+          </div>
+
+          <div className="space-y-3">
+            {(members.length ? members : [{ id: 'owner-fallback', userId: circle.ownerId, role: 'owner', status: 'accepted', user: me } as any]).map((member) => {
+              const isMemberOwner = member.role === 'owner';
+              const name = member.user?.name || (isMemberOwner ? 'Circle Owner' : `Member ${member.userId.slice(0, 4)}`);
+
+              return (
+                <motion.div
+                  key={member.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-between rounded-[1.2rem] border border-border/70 bg-background/80 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarFallback>{initials(name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{name}</p>
+                      <p className="text-xs text-muted-foreground">{member.user?.email || member.userId}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge variant={isMemberOwner ? 'default' : 'secondary'}>
+                      {member.role === 'owner' ? 'Owner' : member.status === 'invited' ? 'Invited' : 'Member'}
+                    </Badge>
+                    {isOwner && !isMemberOwner ? (
+                      <Button
+                        type="button"
+                        size="icon-sm"
+                        variant="ghost"
+                        className="rounded-full"
+                        onClick={() => removeMutation.mutate(member.id)}
+                        disabled={removeMutation.isPending}
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    ) : null}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-[1.8rem] border border-border/70 bg-card/75 p-5 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)]">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Shared notes</p>
+            <h3 className="mt-2 text-xl font-semibold">Recent collaborative context</h3>
+          </div>
+
+          <div className="space-y-3">
+            {sharedNotes.length ? (
+              sharedNotes.map((note) => (
+                <div key={note.id} className="rounded-[1.2rem] border border-border/70 bg-background/80 p-3">
+                  <p className="text-sm font-medium">{note.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content.replace(/<[^>]+>/g, ' ')}</p>
+                  <p className="mt-2 text-[11px] text-muted-foreground">Updated {formatDate(note.updatedAt)}</p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-[1.2rem] border border-dashed border-border/70 bg-background/80 p-5 text-sm text-muted-foreground">
+                No notes available yet. Create or share notes to fill this space.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[1.8rem] border border-border/70 bg-card/75 p-5 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)]">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Activity feed</p>
+            <h3 className="mt-2 text-xl font-semibold">Latest circle events</h3>
+          </div>
+          <Badge variant="outline" className="rounded-full">
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            Live collaboration timeline
+          </Badge>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {activityItems.map((item) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-3 rounded-[1.2rem] border border-border/70 bg-background/80 p-3"
+            >
+              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                {item.id.startsWith('note-') ? (
+                  <MessageSquare className="h-4 w-4" />
+                ) : item.id.startsWith('invite-') ? (
+                  <Mail className="h-4 w-4" />
+                ) : item.id.startsWith('join-') ? (
+                  <Users className="h-4 w-4" />
+                ) : (
+                  <Shield className="h-4 w-4" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{item.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{item.subtitle}</p>
+              </div>
+              <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock3 className="h-3.5 w-3.5" />
+                {formatDate(item.time)}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

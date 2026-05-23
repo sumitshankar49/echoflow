@@ -55,19 +55,26 @@ const bcrypt = __importStar(require("bcryptjs"));
 const schedule_1 = require("@nestjs/schedule");
 const typeorm_2 = require("typeorm");
 const user_entity_1 = require("../../database/entities/user.entity");
+const circle_entity_1 = require("../circles/entities/circle.entity");
+const circle_member_entity_1 = require("../circles/entities/circle-member.entity");
 const mail_service_1 = require("../mail/mail.service");
 const revoked_token_entity_1 = require("./entities/revoked-token.entity");
 const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
 let AuthService = class AuthService {
-    constructor(usersRepository, revokedTokensRepository, passwordResetTokensRepository, jwtService, configService, mailService) {
+    constructor(usersRepository, revokedTokensRepository, passwordResetTokensRepository, circlesRepository, circleMembersRepository, jwtService, configService, mailService) {
         this.usersRepository = usersRepository;
         this.revokedTokensRepository = revokedTokensRepository;
         this.passwordResetTokensRepository = passwordResetTokensRepository;
+        this.circlesRepository = circlesRepository;
+        this.circleMembersRepository = circleMembersRepository;
         this.jwtService = jwtService;
         this.configService = configService;
         this.mailService = mailService;
     }
     async register(registerDto) {
+        if (registerDto.password !== registerDto.confirmPassword) {
+            throw new common_1.BadRequestException('Password and confirm password do not match');
+        }
         const existingUser = await this.usersRepository.findOne({
             where: { email: registerDto.email.toLowerCase() },
         });
@@ -81,6 +88,28 @@ let AuthService = class AuthService {
             password: hashedPassword,
         });
         const savedUser = await this.usersRepository.save(user);
+        if (registerDto.inviteCircleId) {
+            const invitedCircle = await this.circlesRepository.findOne({
+                where: { id: registerDto.inviteCircleId },
+            });
+            if (invitedCircle) {
+                const existingMembership = await this.circleMembersRepository.findOne({
+                    where: {
+                        circleId: invitedCircle.id,
+                        userId: savedUser.id,
+                    },
+                });
+                if (!existingMembership) {
+                    const membership = this.circleMembersRepository.create({
+                        circleId: invitedCircle.id,
+                        userId: savedUser.id,
+                        role: 'member',
+                        status: 'accepted',
+                    });
+                    await this.circleMembersRepository.save(membership);
+                }
+            }
+        }
         const { password, ...safeUser } = savedUser;
         return safeUser;
     }
@@ -291,7 +320,11 @@ exports.AuthService = AuthService = __decorate([
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __param(1, (0, typeorm_1.InjectRepository)(revoked_token_entity_1.RevokedToken)),
     __param(2, (0, typeorm_1.InjectRepository)(password_reset_token_entity_1.PasswordResetToken)),
+    __param(3, (0, typeorm_1.InjectRepository)(circle_entity_1.Circle)),
+    __param(4, (0, typeorm_1.InjectRepository)(circle_member_entity_1.CircleMember)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         jwt_1.JwtService,

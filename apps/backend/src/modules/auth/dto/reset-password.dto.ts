@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,100}$/;
+const STRONG_PASSWORD_MESSAGE =
+  'Password must be 8-100 characters and include uppercase, lowercase, number, and special character';
 
 export class ResetPasswordDto {
   @ApiProperty({
@@ -18,6 +22,7 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   @MinLength(8)
   @MaxLength(100)
+  @Matches(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE })
   newPassword!: string;
 
   @ApiProperty({
@@ -28,5 +33,6 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   @MinLength(8)
   @MaxLength(100)
+  @Matches(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE })
   confirmPassword!: string;
 }

@@ -1,3 +1,5 @@
+import { CircleDetailView } from '@/features/circles/flows/view/detail/circle-detail-view';
+
 export default async function CircleDetailPage({
   params,
 }: {
@@ -5,5 +7,5 @@ export default async function CircleDetailPage({
 }) {
   const { id } = await params;
 
-  return <div>{/* CircleDetailView id={id} */}</div>;
+  return <CircleDetailView id={id} />;
 }

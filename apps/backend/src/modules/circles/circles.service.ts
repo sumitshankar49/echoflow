@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -11,6 +12,7 @@ import { AuthenticatedUser } from '../../common/decorators/current-user.decorato
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { User } from '../../database/entities/user.entity';
+import { MailService } from '../mail/mail.service';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
 import { UpdateCircleDto } from './dto/update-circle.dto';
@@ -26,6 +28,8 @@ export class CirclesService {
     private readonly circleMembersRepository: Repository<CircleMember>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly configService: ConfigService,
+    private readonly mailService: MailService,
   ) {}
 
   async create(createCircleDto: CreateCircleDto, currentUser: AuthenticatedUser): Promise<Circle> {
@@ -53,16 +57,20 @@ export class CirclesService {
     const limit = pagination?.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.circlesRepository
-      .createQueryBuilder('circle')
-      .leftJoin('circle.members', 'member')
-      .where('circle.ownerId = :userId', { userId: currentUser.userId })
-      .orWhere('member.userId = :userId', { userId: currentUser.userId })
-      .orderBy('circle.updatedAt', 'DESC')
-      .distinct(true)
-      .skip(skip)
-      .take(limit)
-      .getManyAndCount();
+    const [data, total] = await this.circlesRepository.findAndCount({
+      where: [
+        { ownerId: currentUser.userId },
+        { members: { userId: currentUser.userId } },
+      ],
+      relations: {
+        members: {
+          user: true,
+        },
+      },
+      order: { updatedAt: 'DESC' },
+      skip,
+      take: limit,
+    });
 
     return new PaginatedResponseDto(data, total, page, limit);
   }
@@ -70,6 +78,11 @@ export class CirclesService {
   async findOne(id: string, currentUser: AuthenticatedUser): Promise<Circle> {
     const circle = await this.circlesRepository.findOne({
       where: { id },
+      relations: {
+        members: {
+          user: true,
+        },
+      },
     });
 
     if (!circle) {
@@ -213,7 +226,7 @@ export class CirclesService {
     circleId: string,
     inviteDto: InviteCircleMemberDto,
     currentUser: AuthenticatedUser,
-  ): Promise<CircleMember> {
+  ): Promise<CircleMember | { message: string }> {
     const circle = await this.circlesRepository.findOne({
       where: {
         id: circleId,
@@ -234,7 +247,20 @@ export class CirclesService {
     });
 
     if (!invitee) {
-      throw new NotFoundException('User with this email was not found');
+      const frontendBaseUrl = this.configService.get<string>('mail.frontendBaseUrl') ?? 'http://localhost:3000';
+      const inviteUrl = `${frontendBaseUrl}/register?inviteCircleId=${encodeURIComponent(circleId)}&inviteEmail=${encodeURIComponent(inviteDto.email.toLowerCase())}`;
+
+      await this.mailService.sendCircleInviteEmail(
+        inviteDto.email.toLowerCase(),
+        circle.name,
+        inviteUrl,
+        currentUser.name,
+      );
+
+      return {
+        message:
+          'Invite email sent. If this person has not signed up yet, they can register and then join from the invite link.',
+      };
     }
 
     const existingMember = await this.circleMembersRepository.findOne({

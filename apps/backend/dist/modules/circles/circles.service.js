@@ -14,17 +14,21 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CirclesService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const paginated_response_dto_1 = require("../../common/dto/paginated-response.dto");
 const user_entity_1 = require("../../database/entities/user.entity");
+const mail_service_1 = require("../mail/mail.service");
 const circle_member_entity_1 = require("./entities/circle-member.entity");
 const circle_entity_1 = require("./entities/circle.entity");
 let CirclesService = class CirclesService {
-    constructor(circlesRepository, circleMembersRepository, usersRepository) {
+    constructor(circlesRepository, circleMembersRepository, usersRepository, configService, mailService) {
         this.circlesRepository = circlesRepository;
         this.circleMembersRepository = circleMembersRepository;
         this.usersRepository = usersRepository;
+        this.configService = configService;
+        this.mailService = mailService;
     }
     async create(createCircleDto, currentUser) {
         const circle = this.circlesRepository.create({
@@ -46,21 +50,30 @@ let CirclesService = class CirclesService {
         const page = pagination?.page ?? 1;
         const limit = pagination?.limit ?? 20;
         const skip = (page - 1) * limit;
-        const [data, total] = await this.circlesRepository
-            .createQueryBuilder('circle')
-            .leftJoin('circle.members', 'member')
-            .where('circle.ownerId = :userId', { userId: currentUser.userId })
-            .orWhere('member.userId = :userId', { userId: currentUser.userId })
-            .orderBy('circle.updatedAt', 'DESC')
-            .distinct(true)
-            .skip(skip)
-            .take(limit)
-            .getManyAndCount();
+        const [data, total] = await this.circlesRepository.findAndCount({
+            where: [
+                { ownerId: currentUser.userId },
+                { members: { userId: currentUser.userId } },
+            ],
+            relations: {
+                members: {
+                    user: true,
+                },
+            },
+            order: { updatedAt: 'DESC' },
+            skip,
+            take: limit,
+        });
         return new paginated_response_dto_1.PaginatedResponseDto(data, total, page, limit);
     }
     async findOne(id, currentUser) {
         const circle = await this.circlesRepository.findOne({
             where: { id },
+            relations: {
+                members: {
+                    user: true,
+                },
+            },
         });
         if (!circle) {
             throw new common_1.NotFoundException('Circle not found');
@@ -175,7 +188,12 @@ let CirclesService = class CirclesService {
             select: { id: true, email: true, name: true },
         });
         if (!invitee) {
-            throw new common_1.NotFoundException('User with this email was not found');
+            const frontendBaseUrl = this.configService.get('mail.frontendBaseUrl') ?? 'http://localhost:3000';
+            const inviteUrl = `${frontendBaseUrl}/register?inviteCircleId=${encodeURIComponent(circleId)}&inviteEmail=${encodeURIComponent(inviteDto.email.toLowerCase())}`;
+            await this.mailService.sendCircleInviteEmail(inviteDto.email.toLowerCase(), circle.name, inviteUrl, currentUser.name);
+            return {
+                message: 'Invite email sent. If this person has not signed up yet, they can register and then join from the invite link.',
+            };
         }
         const existingMember = await this.circleMembersRepository.findOne({
             where: {
@@ -203,6 +221,8 @@ exports.CirclesService = CirclesService = __decorate([
     __param(2, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        typeorm_2.Repository])
+        typeorm_2.Repository,
+        config_1.ConfigService,
+        mail_service_1.MailService])
 ], CirclesService);
 //# sourceMappingURL=circles.service.js.map

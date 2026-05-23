@@ -190,6 +190,14 @@ __decorate([
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Circle UUID' }),
     (0, swagger_1.ApiBody)({ type: invite_circle_member_dto_1.InviteCircleMemberDto }),
     (0, swagger_1.ApiCreatedResponse)({ description: 'Member invited successfully', type: circle_member_entity_1.CircleMember }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Invite link guidance returned when account does not exist',
+        schema: {
+            example: {
+                message: 'No account found for this email yet. Share the invite link so they can join after sign up.',
+            },
+        },
+    }),
     __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, current_user_decorator_1.CurrentUser)()),

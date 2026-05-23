@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 const toNumber = (value: string | undefined, fallback: number): number => {
   const parsed = Number(value);
   return Number.isNaN(parsed) ? fallback : parsed;
@@ -10,7 +12,7 @@ const toBoolean = (value: string | undefined, fallback = false): boolean => {
 
   return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 };
-
+console.log("Configuration loading... NODE_ENV:", process.env.NODE_ENV, "DATABASE_URL:", process.env.DATABASE_URL);
 export default () => ({
   app: {
     nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -19,13 +21,15 @@ export default () => ({
     apiPrefix: process.env.API_PREFIX ?? 'api',
   },
   database: {
-    host: process.env.DB_HOST,
-    port: toNumber(process.env.DB_PORT, 3306),
-    username: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    name: process.env.DB_NAME,
-    synchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
-    logging: toBoolean(process.env.DB_LOGGING, false),
+    host:'127.0.0.1',
+    url:'mysql://root:Sumit@123@localhost:3306/echoflow',
+    // host: process.env.DB_HOST,
+    // port: toNumber(process.env.DB_PORT, 3306),
+    // username: process.env.DB_USER,
+    // password: process.env.DB_PASSWORD,
+    // name: process.env.DB_NAME,
+    // synchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
+    // logging: toBoolean(process.env.DB_LOGGING, false),
   },
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET,
@@ -36,6 +40,7 @@ export default () => ({
   mail: {
     resendApiKey: process.env.RESEND_API_KEY,
     fromEmail: process.env.MAIL_FROM,
+    frontendBaseUrl: process.env.FRONTEND_BASE_URL ?? 'http://localhost:3000',
     resetPasswordUrl:
       process.env.FRONTEND_RESET_PASSWORD_URL ?? 'http://localhost:3000/reset-password',
   },

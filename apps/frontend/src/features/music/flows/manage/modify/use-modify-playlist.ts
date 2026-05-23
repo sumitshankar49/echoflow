@@ -13,11 +13,3 @@ export function useUpdatePlaylist(id: string) {
     },
   });
 }
-
-export function useDeletePlaylist() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: musicService.remove,
-    onSuccess: () => qc.invalidateQueries({ queryKey: musicQueryKeys.playlists() }),
-  });
-}

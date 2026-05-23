@@ -13,6 +13,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { IsNull, LessThan, MoreThan, Repository } from 'typeorm';
 
 import { User } from '../../database/entities/user.entity';
+import { Circle } from '../circles/entities/circle.entity';
+import { CircleMember } from '../circles/entities/circle-member.entity';
 import { MailService } from '../mail/mail.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { RevokedToken } from './entities/revoked-token.entity';
@@ -56,12 +58,20 @@ export class AuthService {
     private readonly revokedTokensRepository: Repository<RevokedToken>,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokensRepository: Repository<PasswordResetToken>,
+    @InjectRepository(Circle)
+    private readonly circlesRepository: Repository<Circle>,
+    @InjectRepository(CircleMember)
+    private readonly circleMembersRepository: Repository<CircleMember>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly mailService: MailService,
   ) {}
 
   async register(registerDto: RegisterDto): Promise<Omit<User, 'password'>> {
+    if (registerDto.password !== registerDto.confirmPassword) {
+      throw new BadRequestException('Password and confirm password do not match');
+    }
+
     const existingUser = await this.usersRepository.findOne({
       where: { email: registerDto.email.toLowerCase() },
     });
@@ -79,6 +89,32 @@ export class AuthService {
     });
 
     const savedUser = await this.usersRepository.save(user);
+
+    if (registerDto.inviteCircleId) {
+      const invitedCircle = await this.circlesRepository.findOne({
+        where: { id: registerDto.inviteCircleId },
+      });
+
+      if (invitedCircle) {
+        const existingMembership = await this.circleMembersRepository.findOne({
+          where: {
+            circleId: invitedCircle.id,
+            userId: savedUser.id,
+          },
+        });
+
+        if (!existingMembership) {
+          const membership = this.circleMembersRepository.create({
+            circleId: invitedCircle.id,
+            userId: savedUser.id,
+            role: 'member',
+            status: 'accepted',
+          });
+
+          await this.circleMembersRepository.save(membership);
+        }
+      }
+    }
 
     const { password, ...safeUser } = savedUser;
     return safeUser;

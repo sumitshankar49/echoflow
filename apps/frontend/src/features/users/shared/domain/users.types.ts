@@ -1,6 +1,6 @@
-export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
 
-export type RelationshipStatus =
+type RelationshipStatus =
   | 'single'
   | 'in_relationship'
   | 'engaged'

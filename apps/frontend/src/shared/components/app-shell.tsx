@@ -17,6 +17,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { authService } from '@/features/auth/shared/data/auth.service';
+import { GlobalVoiceNoteWidget } from '@/shared/components/global-voice-note-widget';
 import { useAuthStore } from '@/shared/store/auth.store';
 
 const navItems = [
@@ -56,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <aside
-        className={`flex shrink-0 flex-col border-r bg-muted/40 p-4 transition-all duration-300 ${
+        className={`sticky top-0 flex h-screen shrink-0 flex-col border-r bg-muted/40 p-4 transition-all duration-300 ${
           isSidebarCollapsed ? 'w-20' : 'w-60'
         }`}
       >
@@ -71,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1">
+        <nav className="flex-1 space-y-1 overflow-y-auto">
           {navItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
@@ -87,50 +88,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="mt-4 flex justify-end border-t pt-3">
+        <div className="mt-4 space-y-2 border-t pt-3">
           <Button
             type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsSidebarCollapsed((value) => !value)}
-            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="h-8 w-8"
+            variant="outline"
+            onClick={onLogout}
+            disabled={isLoggingOut}
+            title={isSidebarCollapsed ? 'Logout' : undefined}
+            aria-label="Logout"
+            className={isSidebarCollapsed ? 'h-9 w-9 p-0' : 'h-9 w-full justify-start gap-2'}
           >
-            {isSidebarCollapsed ? (
-              <PanelLeftOpen className="h-4 w-4" />
+            {isLoggingOut ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <PanelLeftClose className="h-4 w-4" />
+              <Power className="h-4 w-4" />
             )}
+            {!isSidebarCollapsed ? (isLoggingOut ? 'Logging out...' : 'Logout') : null}
           </Button>
+
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarCollapsed((value) => !value)}
+              aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="h-8 w-8"
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         </div>
       </aside>
 
       <main className="min-w-0 flex-1 overflow-y-auto p-8">
-        <div className="mb-6 flex h-10 items-center justify-end">
-          <div className="group relative inline-flex items-center">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Logout"
-              onClick={onLogout}
-              disabled={isLoggingOut}
-              className="h-10 w-10 rounded-full"
-            >
-              {isLoggingOut ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Power className="h-4 w-4" />
-              )}
-            </Button>
-            <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 -translate-x-1/2 translate-y-1 whitespace-nowrap rounded-md border bg-background px-2 py-1 text-xs opacity-0 shadow-sm transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
-              Logout
-            </span>
-          </div>
-        </div>
-
         {children}
       </main>
+
+      <GlobalVoiceNoteWidget />
     </div>
   );
 }

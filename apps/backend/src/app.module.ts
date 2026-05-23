@@ -11,6 +11,7 @@ import { AppController } from './app.controller';
 import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
+import { MoodModule } from './modules/mood/mood.module';
 import { MusicModule } from './modules/music/music.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
@@ -46,11 +47,7 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'mysql',
-        host: configService.getOrThrow<string>('database.host'),
-        port: configService.getOrThrow<number>('database.port'),
-        username: configService.getOrThrow<string>('database.username'),
-        password: configService.getOrThrow<string>('database.password'),
-        database: configService.getOrThrow<string>('database.name'),
+        url: configService.getOrThrow<string>('database.url'),
         synchronize: configService.get<boolean>('database.synchronize', false),
         logging: configService.get<boolean>('database.logging', false),
         autoLoadEntities: true,
@@ -58,6 +55,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     AuthModule,
     CirclesModule,
+    MoodModule,
     MusicModule,
     NotesModule,
     RemindersModule,

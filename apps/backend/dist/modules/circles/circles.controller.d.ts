@@ -27,5 +27,7 @@ export declare class CirclesController {
     leaveCircle(id: string, currentUser: AuthenticatedUser): Promise<{
         message: string;
     }>;
-    inviteMember(id: string, inviteCircleMemberDto: InviteCircleMemberDto, currentUser: AuthenticatedUser): Promise<CircleMember>;
+    inviteMember(id: string, inviteCircleMemberDto: InviteCircleMemberDto, currentUser: AuthenticatedUser): Promise<CircleMember | {
+        message: string;
+    }>;
 }

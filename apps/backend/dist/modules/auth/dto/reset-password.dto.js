@@ -12,6 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResetPasswordDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,100}$/;
+const STRONG_PASSWORD_MESSAGE = 'Password must be 8-100 characters and include uppercase, lowercase, number, and special character';
 class ResetPasswordDto {
 }
 exports.ResetPasswordDto = ResetPasswordDto;
@@ -33,6 +35,7 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MinLength)(8),
     (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.Matches)(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE }),
     __metadata("design:type", String)
 ], ResetPasswordDto.prototype, "newPassword", void 0);
 __decorate([
@@ -44,6 +47,7 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MinLength)(8),
     (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.Matches)(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE }),
     __metadata("design:type", String)
 ], ResetPasswordDto.prototype, "confirmPassword", void 0);
 //# sourceMappingURL=reset-password.dto.js.map

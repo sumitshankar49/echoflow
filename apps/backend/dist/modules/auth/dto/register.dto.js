@@ -12,6 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.RegisterDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,100}$/;
+const STRONG_PASSWORD_MESSAGE = 'Password must be 8-100 characters and include uppercase, lowercase, number, and special character';
 class RegisterDto {
 }
 exports.RegisterDto = RegisterDto;
@@ -46,6 +48,30 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.MinLength)(8),
     (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.Matches)(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "password", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Confirm account password (must match password)',
+        example: 'StrongPass123!',
+        minLength: 8,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(8),
+    (0, class_validator_1.MaxLength)(100),
+    (0, class_validator_1.Matches)(STRONG_PASSWORD_REGEX, { message: STRONG_PASSWORD_MESSAGE }),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "confirmPassword", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Optional circle invitation id to auto-join after signup',
+        example: '8470473c-803f-4b8b-b288-2ce6e5ca2ac5',
+        required: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "inviteCircleId", void 0);
 //# sourceMappingURL=register.dto.js.map

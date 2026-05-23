@@ -21,6 +21,7 @@ const app_controller_1 = require("./app.controller");
 const configuration_1 = __importDefault(require("./config/configuration"));
 const auth_module_1 = require("./modules/auth/auth.module");
 const circles_module_1 = require("./modules/circles/circles.module");
+const mood_module_1 = require("./modules/mood/mood.module");
 const music_module_1 = require("./modules/music/music.module");
 const notes_module_1 = require("./modules/notes/notes.module");
 const reminders_module_1 = require("./modules/reminders/reminders.module");
@@ -59,11 +60,7 @@ exports.AppModule = AppModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (configService) => ({
                     type: 'mysql',
-                    host: configService.getOrThrow('database.host'),
-                    port: configService.getOrThrow('database.port'),
-                    username: configService.getOrThrow('database.username'),
-                    password: configService.getOrThrow('database.password'),
-                    database: configService.getOrThrow('database.name'),
+                    url: configService.getOrThrow('database.url'),
                     synchronize: configService.get('database.synchronize', false),
                     logging: configService.get('database.logging', false),
                     autoLoadEntities: true,
@@ -71,6 +68,7 @@ exports.AppModule = AppModule = __decorate([
             }),
             auth_module_1.AuthModule,
             circles_module_1.CirclesModule,
+            mood_module_1.MoodModule,
             music_module_1.MusicModule,
             notes_module_1.NotesModule,
             reminders_module_1.RemindersModule,

@@ -176,11 +176,20 @@ export class CirclesController {
   @ApiParam({ name: 'id', description: 'Circle UUID' })
   @ApiBody({ type: InviteCircleMemberDto })
   @ApiCreatedResponse({ description: 'Member invited successfully', type: CircleMember })
+  @ApiOkResponse({
+    description: 'Invite link guidance returned when account does not exist',
+    schema: {
+      example: {
+        message:
+          'No account found for this email yet. Share the invite link so they can join after sign up.',
+      },
+    },
+  })
   inviteMember(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() inviteCircleMemberDto: InviteCircleMemberDto,
     @CurrentUser() currentUser: AuthenticatedUser,
-  ): Promise<CircleMember> {
+  ): Promise<CircleMember | { message: string }> {
     return this.circlesService.inviteMember(id, inviteCircleMemberDto, currentUser);
   }
 }

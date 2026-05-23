@@ -38,4 +38,30 @@ export class MailService {
       `,
     });
   }
+
+  async sendCircleInviteEmail(
+    email: string,
+    circleName: string,
+    inviteUrl: string,
+    inviterName?: string,
+  ): Promise<void> {
+    if (!this.resend || !this.fromEmail) {
+      this.logger.warn(
+        `Skipping circle invite email for ${email} because mail provider is not configured`,
+      );
+      return;
+    }
+
+    await this.resend.emails.send({
+      from: this.fromEmail,
+      to: email,
+      subject: `You are invited to join ${circleName} on EchoFlow`,
+      html: `
+        <p>Hello,</p>
+        <p>${inviterName || 'A teammate'} invited you to join <strong>${circleName}</strong> on EchoFlow.</p>
+        <p><a href="${inviteUrl}">Open invitation</a></p>
+        <p>If you do not have an account yet, sign up first using this same link, then join the circle.</p>
+      `,
+    });
+  }
 }

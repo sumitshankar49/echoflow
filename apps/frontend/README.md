@@ -11,6 +11,21 @@ App URL:
 
 - http://localhost:3000
 
+## Google Login Env
+
+Create `.env.local` in frontend root and add:
+
+```env
+NEXT_PUBLIC_GOOGLE_AUTH_URL=http://localhost:4000/api/auth/google
+```
+
+Where it is used:
+
+- `Continue with Google` button in login form.
+- Source: `src/features/auth/flows/manage/login/use-login-form.ts`.
+
+If this variable is missing, the app shows a toast saying Google sign-in is not configured.
+
 ## Kill Port 3000 (Linux)
 
 Use this if port 3000 is already in use:

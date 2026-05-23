@@ -1,3 +1,4 @@
+import "dotenv/config";
 declare const _default: () => {
     app: {
         nodeEnv: string;
@@ -6,13 +7,8 @@ declare const _default: () => {
         apiPrefix: string;
     };
     database: {
-        host: string | undefined;
-        port: number;
-        username: string | undefined;
-        password: string | undefined;
-        name: string | undefined;
-        synchronize: boolean;
-        logging: boolean;
+        host: string;
+        url: string;
     };
     jwt: {
         accessSecret: string | undefined;
@@ -23,6 +19,7 @@ declare const _default: () => {
     mail: {
         resendApiKey: string | undefined;
         fromEmail: string | undefined;
+        frontendBaseUrl: string;
         resetPasswordUrl: string;
     };
     swagger: {

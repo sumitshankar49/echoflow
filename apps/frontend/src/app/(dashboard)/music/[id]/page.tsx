@@ -1,3 +1,5 @@
+import { PlaylistDetailView } from '@/features/music/flows/view/detail/playlist-detail-view';
+
 export default async function PlaylistDetailPage({
   params,
 }: {
@@ -5,5 +7,5 @@ export default async function PlaylistDetailPage({
 }) {
   const { id } = await params;
 
-  return <div>{/* PlaylistDetailView id={id} */}</div>;
+  return <PlaylistDetailView id={id} />;
 }

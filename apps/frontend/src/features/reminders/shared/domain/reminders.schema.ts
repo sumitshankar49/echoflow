@@ -6,10 +6,5 @@ export const createReminderSchema = z.object({
   remindAt: z.string().min(1, 'Due date is required'),
 });
 
-export const updateReminderSchema = createReminderSchema
-  .partial()
-  .extend({ isCompleted: z.boolean().optional() });
-
 export type CreateReminderSchema = z.infer<typeof createReminderSchema>;
-export type UpdateReminderSchema = z.infer<typeof updateReminderSchema>;
 
