@@ -53,13 +53,9 @@ function formatTimezoneLabel() {
 }
 
 export function RealTimeClock() {
-  const [isMounted, setIsMounted] = useState(false);
-  const [now, setNow] = useState(() => new Date('2000-01-01T00:00:00.000Z'));
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    setIsMounted(true);
-    setNow(new Date());
-
     const timer = window.setInterval(() => {
       const current = new Date();
       setNow(current);
@@ -70,7 +66,7 @@ export function RealTimeClock() {
 
   const hour = now.getHours();
   const minute = now.getMinutes();
-  const second = isMounted ? now.getSeconds() + now.getMilliseconds() / 1000 : 0;
+  const second = now.getSeconds() + now.getMilliseconds() / 1000;
 
   const hourRotation = ((hour % 12) + minute / 60) * 30;
   const minuteRotation = (minute + second / 60) * 6;
@@ -80,11 +76,8 @@ export function RealTimeClock() {
   const digitalRingCircumference = 2 * Math.PI * digitalRingRadius;
   const digitalRingOffset = digitalRingCircumference * (1 - secondsProgress);
 
-  const dateLabel = useMemo(() => (isMounted ? formatDate(now) : 'Loading date...'), [isMounted, now]);
-  const timeLabel = useMemo(
-    () => (isMounted ? formatDigitalTimeParts(now) : { hourMinute: '--:--', period: '--' }),
-    [isMounted, now],
-  );
+  const dateLabel = useMemo(() => formatDate(now), [now]);
+  const timeLabel = useMemo(() => formatDigitalTimeParts(now), [now]);
   const timezoneLabel = useMemo(() => formatTimezoneLabel(), []);
 
   return (

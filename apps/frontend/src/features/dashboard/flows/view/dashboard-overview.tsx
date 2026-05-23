@@ -216,7 +216,7 @@ export function DashboardOverview() {
         id: "circle-touchpoint",
         title: "Share one update in a circle",
         description:
-          "A short status update in your circle can keep everyone aligned and reduce context switching later.",
+          "A quick status update keeps everyone aligned, improves transparency, and reduces unnecessary follow-ups later.",
         href: "/circles",
       });
     }
