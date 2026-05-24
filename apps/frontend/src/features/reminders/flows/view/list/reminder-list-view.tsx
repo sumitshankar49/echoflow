@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
+import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -627,12 +628,15 @@ export function ReminderListView() {
 
         {/* Loading skeleton */}
         {isPending && (
-          <div className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[...Array(4)].map((_, i) => (
-              <div
+              <motion.div
                 key={i}
-                className="h-[88px] animate-pulse rounded-2xl border border-l-4 border-l-muted bg-muted/40"
-              />
+                animate={{ y: [0, -4, 0] }}
+                transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: i * 0.08 }}
+              >
+                <ShimmerCard lineCount={3} showAvatar delay={i * 0.06} className="h-[120px]" />
+              </motion.div>
             ))}
           </div>
         )}

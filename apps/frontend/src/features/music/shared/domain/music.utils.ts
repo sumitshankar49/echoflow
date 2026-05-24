@@ -42,6 +42,18 @@ function parseUrl(value: string) {
   }
 }
 
+function isOpaqueId(value: string) {
+  return /^[a-zA-Z0-9_-]{14,}$/.test(value);
+}
+
+function humanize(value: string) {
+  return value
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 function extractYouTubeId(value: string) {
   const match = value.match(
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/,
@@ -114,19 +126,65 @@ function detectSource(url: string): PlaylistTrack['source'] {
 }
 
 function getTrackTitle(url: string, index: number) {
-  const youtubeId = extractYouTubeId(url);
-  if (youtubeId) {
-    return `YouTube Session ${index + 1}`;
+  const parsedUrl = parseUrl(url);
+
+  if (parsedUrl) {
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+    const segments = parsedUrl.pathname.split('/').filter(Boolean);
+    const lastSegment = segments.at(-1) ?? '';
+
+    if (host.includes('spotify.com')) {
+      if (segments[0] === 'playlist') return 'Spotify Playlist';
+      if (segments[0] === 'track') return 'Spotify Track';
+      if (segments[0] === 'album') return 'Spotify Album';
+      if (segments[0] === 'artist') return 'Spotify Artist';
+      return 'Spotify Link';
+    }
+
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      if (parsedUrl.searchParams.get('list')) return 'YouTube Playlist';
+      if (extractYouTubeId(url)) return `YouTube Session ${index + 1}`;
+      return 'YouTube Link';
+    }
+
+    if (host.includes('soundcloud.com')) {
+      return 'SoundCloud Track';
+    }
+
+    if (lastSegment && !isOpaqueId(lastSegment)) {
+      const title = prettifySegment(lastSegment);
+      if (title) {
+        return humanize(title);
+      }
+    }
+
+    return `${humanize(host.split('.').slice(0, 2).join(' '))} Link`;
   }
 
-  const parsedUrl = parseUrl(url);
-  const segment = parsedUrl?.pathname.split('/').filter(Boolean).at(-1) ?? url;
-  const title = prettifySegment(segment);
+  const fallback = prettifySegment(url);
+  if (fallback && !isOpaqueId(fallback)) {
+    return humanize(fallback);
+  }
 
-  return title ? title.replace(/\b\w/g, (character) => character.toUpperCase()) : `Track ${index + 1}`;
+  return `Track ${index + 1}`;
 }
 
 function getTrackSubtitle(url: string, source: PlaylistTrack['source']) {
+  const parsedUrl = parseUrl(url);
+
+  if (parsedUrl) {
+    const host = parsedUrl.hostname.replace(/^www\./, '').toLowerCase();
+    const segments = parsedUrl.pathname.split('/').filter(Boolean);
+
+    if (host.includes('spotify.com') && segments[0]) {
+      return `${humanize(segments[0])} • ${parsedUrl.hostname.replace(/^www\./, '')}`;
+    }
+
+    if ((host.includes('youtube.com') || host.includes('youtu.be')) && parsedUrl.searchParams.get('list')) {
+      return 'Playlist link';
+    }
+  }
+
   if (source === 'youtube') {
     return 'YouTube link';
   }
@@ -135,7 +193,6 @@ function getTrackSubtitle(url: string, source: PlaylistTrack['source']) {
     return 'Local or direct file';
   }
 
-  const parsedUrl = parseUrl(url);
   return parsedUrl?.hostname?.replace(/^www\./, '') || 'External link';
 }
 

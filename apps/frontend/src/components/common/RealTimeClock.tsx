@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock3, Sparkles } from 'lucide-react';
 
+type ClockPreference = '12h' | '24h';
 
 
 function formatDate(value: Date) {
@@ -15,11 +16,20 @@ function formatDate(value: Date) {
   return `${weekday}, ${day} ${month} ${year}`;
 }
 
-function formatDigitalTimeParts(value: Date) {
+function getClockPreference(): ClockPreference {
+  if (typeof window === 'undefined') {
+    return '12h';
+  }
+
+  const saved = window.localStorage.getItem('profile_clock_pref');
+  return saved === '24h' ? '24h' : '12h';
+}
+
+function formatDigitalTimeParts(value: Date, clockPref: ClockPreference) {
   const parts = new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true,
+    hour12: clockPref === '12h',
   }).formatToParts(value);
 
   const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
@@ -54,6 +64,20 @@ function formatTimezoneLabel() {
 
 export function RealTimeClock() {
   const [now, setNow] = useState(new Date());
+  const [clockPref, setClockPref] = useState<ClockPreference>('12h');
+
+  useEffect(() => {
+    setClockPref(getClockPreference());
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === 'profile_clock_pref') {
+        setClockPref(getClockPreference());
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -77,7 +101,7 @@ export function RealTimeClock() {
   const digitalRingOffset = digitalRingCircumference * (1 - secondsProgress);
 
   const dateLabel = useMemo(() => formatDate(now), [now]);
-  const timeLabel = useMemo(() => formatDigitalTimeParts(now), [now]);
+  const timeLabel = useMemo(() => formatDigitalTimeParts(now, clockPref), [now, clockPref]);
   const timezoneLabel = useMemo(() => formatTimezoneLabel(), []);
 
   return (
@@ -186,7 +210,7 @@ export function RealTimeClock() {
                   {timeLabel.hourMinute}
                 </p>
                 <span className="mt-1 text-[0.65rem] font-semibold tracking-[0.14em] text-cyan-200/95 sm:text-[0.7rem]">
-                  {timeLabel.period}
+                  {clockPref === '12h' ? timeLabel.period : '24H'}
                 </span>
               </div>
 

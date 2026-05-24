@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Grid2X2,
   List,
-  Mic,
   Search,
   Sparkles,
   Star,
@@ -15,6 +14,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { ContentReveal } from '@/components/common/ContentReveal';
+import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,18 +25,6 @@ import { notesService } from '@/features/notes/shared/data/notes.service';
 import { useDebouncedValue } from '@/shared/utils/use-debounced-value';
 
 const PAGE_SIZE = 8;
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((event: any) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-};
 
 function stripHtml(value: string) {
   return value
@@ -64,13 +53,8 @@ export function NoteListView() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [voiceSeed, setVoiceSeed] = useState(0);
-  const [voiceDraft, setVoiceDraft] = useState('');
-  const [isVoiceCapturing, setIsVoiceCapturing] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const lastCapturedChunkRef = useRef('');
   const debouncedQuery = useDebouncedValue(query, 350);
 
   const { data: notes = [], isPending, isError } = useQuery({
@@ -188,33 +172,9 @@ export function NoteListView() {
     return () => observer.disconnect();
   }, [filteredNotes.length, useInfiniteMode]);
 
-  const stopVoiceCapture = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition) {
-      return;
-    }
-
-    recognition.onresult = null;
-    recognition.onerror = null;
-    recognition.onend = null;
-    recognition.abort();
-    recognitionRef.current = null;
-    setIsVoiceCapturing(false);
-  };
-
   const resetEditorState = () => {
-    stopVoiceCapture();
     setIsEditorOpen(false);
-    setVoiceDraft('');
-    lastCapturedChunkRef.current = '';
-    setVoiceSeed((value) => value + 1);
   };
-
-  useEffect(() => {
-    return () => {
-      stopVoiceCapture();
-    };
-  }, []);
 
   const handleFavoriteToggle = async (noteId: string, currentFavorite: boolean) => {
     await toggleFavoriteMutation.mutateAsync({
@@ -248,87 +208,23 @@ export function NoteListView() {
     resetEditorState();
   };
 
-  const handleVoiceQuickNote = () => {
-    setIsEditorOpen(true);
-
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    const Recognition =
-      (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: any }).webkitSpeechRecognition;
-
-    if (!Recognition) {
-      toast.info('Speech recognition is not available in this browser');
-      return;
-    }
-
-    // Toggle: if already capturing, stop and return.
-    if (isVoiceCapturing) {
-      stopVoiceCapture();
-      return;
-    }
-
-    stopVoiceCapture();
-    // Reset duplicate guard for each new recording session.
-    lastCapturedChunkRef.current = '';
-
-    const recognition = new Recognition() as SpeechRecognitionLike;
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.continuous = false;
-
-    recognitionRef.current = recognition;
-    setIsVoiceCapturing(true);
-
-    recognition.onresult = (event: any) => {
-      const chunks: string[] = [];
-
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        if (event.results[i].isFinal) {
-          chunks.push(event.results[i][0].transcript);
-        }
-      }
-
-      const transcript = chunks.join(' ').trim();
-      if (!transcript) {
-        return;
-      }
-
-      lastCapturedChunkRef.current = transcript;
-      setVoiceDraft((current) => `${current}${current ? '<br/>' : ''}${transcript}`);
-    };
-
-    recognition.onerror = () => {
-      setIsVoiceCapturing(false);
-      recognitionRef.current = null;
-      toast.error('Could not capture voice note');
-    };
-
-    recognition.onend = () => {
-      setIsVoiceCapturing(false);
-      recognitionRef.current = null;
-    };
-
-    try {
-      recognition.start();
-    } catch {
-      setIsVoiceCapturing(false);
-      recognitionRef.current = null;
-      toast.error('Could not start voice capture. Please try again.');
-    }
-  };
-
-  if (isPending) {
-    return <p className="text-sm text-muted-foreground">Loading notes…</p>;
-  }
-
   if (isError) {
     return <p className="text-sm text-red-500">Failed to load notes.</p>;
   }
 
   return (
+    <ContentReveal
+      loading={isPending}
+      loader={
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ShimmerCard key={index} lineCount={4} showAvatar delay={index * 0.05} />
+            ))}
+          </div>
+        </div>
+      }
+    >
     <div className="space-y-5">
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -427,8 +323,6 @@ export function NoteListView() {
               </div>
 
               <NoteEditor
-                key={`editor-${voiceSeed}`}
-                initialContent={voiceDraft}
                 submitLabel={createMutation.isPending ? 'Saving...' : 'Create note'}
                 isPending={createMutation.isPending}
                 onCancel={resetEditorState}
@@ -439,7 +333,15 @@ export function NoteListView() {
         ) : null}
       </AnimatePresence>
 
-      {/* {isSearchPending ? <p className="text-sm text-muted-foreground">Searching notes…</p> : null} */}
+      {isSearchPending ? (
+        <motion.p
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-sm text-muted-foreground"
+        >
+          Searching notes...
+        </motion.p>
+      ) : null}
 
       <div
         className={
@@ -547,25 +449,7 @@ export function NoteListView() {
       ) : (
         <div ref={sentinelRef} className="h-1" />
       )}
-
-      <div className="fixed bottom-8 right-8 z-30">
-        {isVoiceCapturing ? (
-          <div className="absolute inset-0 animate-ping rounded-full bg-red-400/40" />
-        ) : (
-          <div className="absolute inset-0 animate-ping rounded-full bg-zinc-500/20" />
-        )}
-        <Button
-          type="button"
-          size="icon"
-          onClick={handleVoiceQuickNote}
-          className={`relative h-14 w-14 rounded-full shadow-lg transition-colors ${
-            isVoiceCapturing ? 'bg-red-500 text-white hover:bg-red-600' : ''
-          }`}
-          title={isVoiceCapturing ? 'Tap to stop recording' : 'Tap to start voice note'}
-        >
-          <Mic className="h-6 w-6" />
-        </Button>
-      </div>
     </div>
+    </ContentReveal>
   );
 }

@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Info, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Info } from 'lucide-react';
 
+import { ButtonLoader } from '@/components/common/ButtonLoader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -166,15 +167,22 @@ export function RegisterForm() {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {AUTH_BUTTON_LABELS.CREATING_ACCOUNT}
-            </span>
+            <ButtonLoader label={AUTH_BUTTON_LABELS.CREATING_ACCOUNT} />
           ) : (
             AUTH_BUTTON_LABELS.CREATE_ACCOUNT
           )}
         </Button>
       </motion.div>
+
+      {isSubmitting ? (
+        <motion.p
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center text-xs text-zinc-500 dark:text-zinc-400"
+        >
+          Creating your personalized EchoFlow workspace.
+        </motion.p>
+      ) : null}
     </motion.form>
   );
 }

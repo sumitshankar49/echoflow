@@ -105,10 +105,6 @@ let UsersService = class UsersService {
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        const isCurrentPasswordValid = await bcrypt.compare(changePasswordDto.currentPassword, user.password);
-        if (!isCurrentPasswordValid) {
-            throw new common_1.BadRequestException('Current password is incorrect');
-        }
         user.password = await bcrypt.hash(changePasswordDto.newPassword, 12);
         await this.usersRepository.save(user);
         return { message: 'Password updated successfully' };

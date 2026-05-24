@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -99,5 +104,115 @@ export class MusicService {
 
     await this.playlistsRepository.remove(playlist);
     return { message: 'Playlist deleted successfully' };
+  }
+
+  async resolveLinkMetadata(url: string): Promise<{
+    title?: string;
+    artist?: string;
+    thumbnailUrl?: string;
+  }> {
+    const trimmed = url?.trim();
+
+    if (!trimmed) {
+      throw new BadRequestException('url is required');
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new BadRequestException('Invalid URL');
+    }
+
+    const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+    const encodedUrl = encodeURIComponent(trimmed);
+
+    if (host.includes('spotify.com')) {
+      const response = await fetch(`https://open.spotify.com/oembed?url=${encodedUrl}`);
+      if (!response.ok) {
+        return {};
+      }
+
+      const payload = (await response.json()) as {
+        title?: string;
+        thumbnail_url?: string;
+      };
+
+      const titleRaw = payload.title?.trim();
+      if (!titleRaw) {
+        return {};
+      }
+
+      const byIndex = titleRaw.toLowerCase().lastIndexOf(' by ');
+      if (byIndex > 0) {
+        return {
+          title: titleRaw.slice(0, byIndex).trim(),
+          artist: titleRaw.slice(byIndex + 4).trim(),
+          thumbnailUrl: payload.thumbnail_url,
+        };
+      }
+
+      return {
+        title: titleRaw,
+        thumbnailUrl: payload.thumbnail_url,
+      };
+    }
+
+    if (host.includes('youtube.com') || host.includes('youtu.be')) {
+      const response = await fetch(`https://www.youtube.com/oembed?url=${encodedUrl}&format=json`);
+      if (!response.ok) {
+        return {};
+      }
+
+      const payload = (await response.json()) as {
+        title?: string;
+        author_name?: string;
+        thumbnail_url?: string;
+      };
+
+      return {
+        title: payload.title?.trim(),
+        artist: payload.author_name?.trim(),
+        thumbnailUrl: payload.thumbnail_url,
+      };
+    }
+
+    if (host.includes('soundcloud.com')) {
+      const response = await fetch(`https://soundcloud.com/oembed?format=json&url=${encodedUrl}`);
+      if (!response.ok) {
+        return {};
+      }
+
+      const payload = (await response.json()) as {
+        title?: string;
+        author_name?: string;
+        thumbnail_url?: string;
+      };
+
+      const titleRaw = payload.title?.trim();
+      if (!titleRaw) {
+        return {
+          artist: payload.author_name?.trim(),
+          thumbnailUrl: payload.thumbnail_url,
+        };
+      }
+
+      const separatorIndex = titleRaw.indexOf(' - ');
+      if (separatorIndex > 0) {
+        return {
+          artist: titleRaw.slice(0, separatorIndex).trim(),
+          title: titleRaw.slice(separatorIndex + 3).trim(),
+          thumbnailUrl: payload.thumbnail_url,
+        };
+      }
+
+      return {
+        title: titleRaw,
+        artist: payload.author_name?.trim(),
+        thumbnailUrl: payload.thumbnail_url,
+      };
+    }
+
+    return {};
   }
 }

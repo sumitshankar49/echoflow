@@ -15,4 +15,9 @@ export declare class MusicService {
     remove(id: string, currentUser: AuthenticatedUser): Promise<{
         message: string;
     }>;
+    resolveLinkMetadata(url: string): Promise<{
+        title?: string;
+        artist?: string;
+        thumbnailUrl?: string;
+    }>;
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
 
+import { ButtonLoader } from '@/components/common/ButtonLoader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,15 +36,22 @@ export function ForgotPasswordForm() {
       <motion.div whileHover={{ y: -1 }} transition={{ duration: 0.15 }}>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {AUTH_BUTTON_LABELS.SENDING_RESET_LINK}
-            </span>
+            <ButtonLoader label={AUTH_BUTTON_LABELS.SENDING_RESET_LINK} />
           ) : (
             AUTH_BUTTON_LABELS.SEND_RESET_LINK
           )}
         </Button>
       </motion.div>
+
+      {isSubmitting ? (
+        <motion.p
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center text-xs text-zinc-500 dark:text-zinc-400"
+        >
+          Sending a secure reset link to your inbox.
+        </motion.p>
+      ) : null}
     </motion.form>
   );
 }

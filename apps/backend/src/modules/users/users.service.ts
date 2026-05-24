@@ -85,15 +85,6 @@ export class UsersService {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    const isCurrentPasswordValid = await bcrypt.compare(
-      changePasswordDto.currentPassword,
-      user.password,
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new BadRequestException('Current password is incorrect');
-    }
-
     user.password = await bcrypt.hash(changePasswordDto.newPassword, 12);
     await this.usersRepository.save(user);
 

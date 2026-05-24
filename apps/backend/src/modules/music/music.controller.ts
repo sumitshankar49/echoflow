@@ -70,6 +70,26 @@ export class MusicController {
     return this.musicService.create(createPlaylistDto, currentUser);
   }
 
+  @Get('link-metadata')
+  @ApiOperation({ summary: 'Resolve external music link metadata' })
+  @ApiQuery({ name: 'url', required: true, description: 'Track or playlist URL' })
+  @ApiOkResponse({
+    description: 'Resolved metadata',
+    schema: {
+      example: {
+        title: 'Top Songs Playlist',
+        artist: 'Spotify',
+        thumbnailUrl: 'https://i.scdn.co/image/abcd',
+      },
+    },
+  })
+  resolveLinkMetadata(
+    @Query('url') url: string,
+    @CurrentUser() _currentUser: AuthenticatedUser,
+  ): Promise<{ title?: string; artist?: string; thumbnailUrl?: string }> {
+    return this.musicService.resolveLinkMetadata(url);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get playlist by id' })
   @ApiParam({ name: 'id', description: 'Playlist UUID' })

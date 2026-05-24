@@ -72,7 +72,7 @@ export function PlaylistEditorForm({
     <form
       onSubmit={submit}
       className={cn(
-        'rounded-[2rem] border border-white/10 bg-slate-950/80 p-5 text-white shadow-[0_20px_65px_-35px_rgba(15,23,42,0.9)] backdrop-blur-xl',
+        'rounded-[2rem] border border-white/10 bg-slate-950/80 p-5 text-white shadow-[0_20px_65px_-35px_rgba(15,23,42,0.9)] backdrop-blur-xl sm:p-6',
         className,
       )}
     >
@@ -91,8 +91,8 @@ export function PlaylistEditorForm({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 md:col-span-1">
+      <div className="mt-6 space-y-4">
+        <div className="space-y-2">
           <Label className="text-white/85">Playlist name</Label>
           <Input
             placeholder="Moonlit Focus"
@@ -102,10 +102,10 @@ export function PlaylistEditorForm({
           {errors.name ? <p className="text-xs text-rose-300">{errors.name.message}</p> : null}
         </div>
 
-        <div className="space-y-2 md:col-span-1">
+        <div className="space-y-2">
           <Label className="text-white/85">Mood note</Label>
           <Textarea
-            rows={4}
+            rows={3}
             placeholder="A warm mix for quiet mornings, soft rain, and long planning blocks."
             {...register('description')}
             className="rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
@@ -134,7 +134,7 @@ export function PlaylistEditorForm({
           </Button>
         </div>
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-1">
           {urls.map((_, index) => (
             <div key={`track-${index}`} className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
               <div className="flex items-center gap-3">
@@ -158,7 +158,7 @@ export function PlaylistEditorForm({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+                  className="mt-5 rounded-full text-white/60 hover:bg-white/10 hover:text-white"
                   onClick={() =>
                     setValue(
                       'urls',

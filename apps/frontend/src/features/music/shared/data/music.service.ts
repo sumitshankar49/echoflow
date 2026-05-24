@@ -41,11 +41,19 @@ export const musicService = {
     apiClient.get<PlaylistApiResponse>(`/music/playlists/${id}`).then((r) => normalizePlaylist(r.data)),
   create: (payload: CreatePlaylistPayload) =>
     apiClient
-      .post<PlaylistApiResponse>('/music/playlists', { ...payload, tracks: payload.urls })
+      .post<PlaylistApiResponse>('/music/playlists', {
+        name: payload.name,
+        description: payload.description,
+        tracks: payload.urls,
+      })
       .then((r) => normalizePlaylist(r.data)),
   update: (id: string, payload: UpdatePlaylistPayload) =>
     apiClient
-      .patch<PlaylistApiResponse>(`/music/playlists/${id}`, { ...payload, tracks: payload.urls })
+      .patch<PlaylistApiResponse>(`/music/playlists/${id}`, {
+        ...(payload.name !== undefined ? { name: payload.name } : {}),
+        ...(payload.description !== undefined ? { description: payload.description } : {}),
+        ...(payload.urls !== undefined ? { tracks: payload.urls } : {}),
+      })
       .then((r) => normalizePlaylist(r.data)),
   remove: (id: string) => apiClient.delete(`/music/playlists/${id}`).then((r) => r.data),
 };

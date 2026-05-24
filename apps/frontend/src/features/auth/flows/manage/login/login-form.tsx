@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
+import { ButtonLoader } from '@/components/common/ButtonLoader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,15 +103,22 @@ export function LoginForm() {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {AUTH_BUTTON_LABELS.SIGNING_IN}
-            </span>
+            <ButtonLoader label={AUTH_BUTTON_LABELS.SIGNING_IN} />
           ) : (
             AUTH_BUTTON_LABELS.SIGN_IN
           )}
         </Button>
       </motion.div>
+
+      {isSubmitting ? (
+        <motion.p
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center text-xs text-zinc-500 dark:text-zinc-400"
+        >
+          Thinking... Signing you in with a secure session.
+        </motion.p>
+      ) : null}
     </motion.form>
   );
 }

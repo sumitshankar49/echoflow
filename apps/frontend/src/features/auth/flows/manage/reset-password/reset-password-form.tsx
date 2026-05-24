@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Info, Loader2 } from 'lucide-react';
+import { Info } from 'lucide-react';
 import Link from 'next/link';
 
+import { ButtonLoader } from '@/components/common/ButtonLoader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -92,15 +93,22 @@ export function ResetPasswordForm({ token }: { token?: string | null }) {
       <motion.div whileHover={{ y: -1 }} transition={{ duration: 0.15 }}>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {AUTH_BUTTON_LABELS.RESETTING_PASSWORD}
-            </span>
+            <ButtonLoader label={AUTH_BUTTON_LABELS.RESETTING_PASSWORD} />
           ) : (
             AUTH_BUTTON_LABELS.RESET_PASSWORD
           )}
         </Button>
       </motion.div>
+
+      {isSubmitting ? (
+        <motion.p
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center text-xs text-zinc-500 dark:text-zinc-400"
+        >
+          Updating your password and securing your account.
+        </motion.p>
+      ) : null}
     </motion.form>
   );
 }

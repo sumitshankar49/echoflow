@@ -28,6 +28,7 @@ import {
   AvatarGroup,
   AvatarGroupCount,
 } from "@/components/ui/avatar";
+import { ShimmerCard } from "@/components/common/ShimmerCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -527,9 +528,14 @@ export function DashboardOverview() {
           <div className="-mx-5 mt-4 overflow-x-auto px-5 pb-1">
             <div className="flex gap-3">
               {notesPending ? (
-                <div className="rounded-2xl border border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">
-                  Loading notes...
-                </div>
+                Array.from({ length: 3 }).map((_, index) => (
+                  <ShimmerCard
+                    key={index}
+                    lineCount={4}
+                    delay={index * 0.06}
+                    className="min-w-[240px] max-w-[280px] border-border/50 bg-background/55"
+                  />
+                ))
               ) : recentNotes.length ? (
                 recentNotes.map((note) => (
                   <motion.div

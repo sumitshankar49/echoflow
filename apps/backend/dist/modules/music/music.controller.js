@@ -32,6 +32,9 @@ let MusicController = class MusicController {
     create(createPlaylistDto, currentUser) {
         return this.musicService.create(createPlaylistDto, currentUser);
     }
+    resolveLinkMetadata(url, _currentUser) {
+        return this.musicService.resolveLinkMetadata(url);
+    }
     findOne(id, currentUser) {
         return this.musicService.findOne(id, currentUser);
     }
@@ -69,6 +72,26 @@ __decorate([
     __metadata("design:paramtypes", [create_playlist_dto_1.CreatePlaylistDto, Object]),
     __metadata("design:returntype", Promise)
 ], MusicController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('link-metadata'),
+    (0, swagger_1.ApiOperation)({ summary: 'Resolve external music link metadata' }),
+    (0, swagger_1.ApiQuery)({ name: 'url', required: true, description: 'Track or playlist URL' }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Resolved metadata',
+        schema: {
+            example: {
+                title: 'Top Songs Playlist',
+                artist: 'Spotify',
+                thumbnailUrl: 'https://i.scdn.co/image/abcd',
+            },
+        },
+    }),
+    __param(0, (0, common_1.Query)('url')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], MusicController.prototype, "resolveLinkMetadata", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get playlist by id' }),

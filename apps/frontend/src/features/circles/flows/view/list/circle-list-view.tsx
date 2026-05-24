@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, HeartHandshake, Sparkles, Users, UsersRound } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar';
@@ -40,11 +42,37 @@ function fakeMemberNames(circleName: string) {
 }
 
 export function CircleListView() {
-  const { data: circles, isPending, isError } = useCircleList();
+  const { data: circles, isPending, isFetching, isError } = useCircleList();
+  const [showEntryLoader, setShowEntryLoader] = useState(true);
   const { data: me } = useQuery({ queryKey: usersQueryKeys.me(), queryFn: usersService.getMe });
   const circleItems = Array.isArray(circles) ? circles : [];
 
-  if (isPending) return <p className="text-sm text-muted-foreground">Loading circles…</p>;
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setShowEntryLoader(false);
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const showLoading = showEntryLoader || isPending || (isFetching && circleItems.length === 0);
+
+  if (showLoading)
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <motion.div
+              key={index}
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 2.3, repeat: Infinity, ease: 'easeInOut', delay: index * 0.07 }}
+            >
+              <ShimmerCard lineCount={4} showAvatar delay={index * 0.04} className="h-[240px]" />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    );
   if (isError) return <p className="text-sm text-red-500">Failed to load circles.</p>;
 
   return (
