@@ -10,7 +10,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { createPlaylistSchema, type CreatePlaylistSchema } from '../domain/music.schema';
-import { sanitizePlaylistPayload } from '../domain/music.utils';
+import {
+  extractPlaylistMood,
+  moodSuggestions,
+  sanitizePlaylistPayload,
+  stripMoodMetadata,
+  type PlaylistMood,
+} from '../domain/music.utils';
 
 interface PlaylistEditorFormProps {
   title: string;
@@ -27,7 +33,8 @@ interface PlaylistEditorFormProps {
 function getDefaultValues(initialValues?: Partial<CreatePlaylistSchema>): CreatePlaylistSchema {
   return {
     name: initialValues?.name ?? '',
-    description: initialValues?.description ?? '',
+    description: stripMoodMetadata(initialValues?.description) ?? '',
+    mood: initialValues?.mood ?? extractPlaylistMood(initialValues?.description) ?? undefined,
     urls: initialValues?.urls?.length ? initialValues.urls : [''],
   };
 }
@@ -56,9 +63,10 @@ export function PlaylistEditorForm({
   });
 
   const urls = watch('urls');
+  const selectedMood = watch('mood');
   useEffect(() => {
     reset(getDefaultValues(initialValues));
-  }, [initialValues?.description, initialValues?.name, initialValues?.urls?.join('|'), reset]);
+  }, [initialValues?.description, initialValues?.mood, initialValues?.name, initialValues?.urls?.join('|'), reset]);
 
   const submit = handleSubmit(async (values) => {
     await onSubmit(sanitizePlaylistPayload(values));
@@ -103,6 +111,52 @@ export function PlaylistEditorForm({
         </div>
 
         <div className="space-y-2">
+          <Label className="text-white/85">Mood suggestion</Label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {moodSuggestions.map((mood) => {
+              const isActive = selectedMood === mood.value;
+
+              return (
+                <button
+                  key={mood.value}
+                  type="button"
+                  onClick={() =>
+                    setValue('mood', mood.value as PlaylistMood, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  className={cn(
+                    'rounded-2xl border px-3 py-2 text-left transition',
+                    isActive
+                      ? 'border-cyan-200/50 bg-cyan-300/15 text-white'
+                      : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10',
+                  )}
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/55">Mood</p>
+                  <p className="mt-1 text-sm font-semibold">{mood.title}</p>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-white/55">This helps filter playlists by mood in the music section.</p>
+          {selectedMood ? (
+            <button
+              type="button"
+              className="text-xs text-cyan-200/85 underline-offset-2 hover:underline"
+              onClick={() =>
+                setValue('mood', undefined, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+            >
+              Clear mood
+            </button>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
           <Label className="text-white/85">Mood note</Label>
           <Textarea
             rows={3}
@@ -119,19 +173,36 @@ export function PlaylistEditorForm({
           <div>
             <h3 className="text-sm font-medium text-white/85">Tracks and sources</h3>
             <p className="mt-1 text-xs leading-5 text-white/55">
-              Add YouTube links, direct audio files, or local paths such as /audio/rain.mp3.
+              Add YouTube video links or a YouTube playlist link to auto-import all songs.
             </p>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10"
-            onClick={() => setValue('urls', [...urls, ''], { shouldDirty: true, shouldValidate: true })}
-          >
-            <Plus className="h-4 w-4" />
-            Add song
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-rose-200/30 bg-rose-300/10 text-rose-100 hover:bg-rose-300/20"
+              onClick={() =>
+                setValue('urls', [...urls, 'https://www.youtube.com/watch?v='], {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+            >
+              <Link2 className="h-4 w-4" />
+              Add from YouTube
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10"
+              onClick={() => setValue('urls', [...urls, ''], { shouldDirty: true, shouldValidate: true })}
+            >
+              <Plus className="h-4 w-4" />
+              Add song
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4 max-h-[300px] space-y-3 overflow-y-auto pr-1">
@@ -145,7 +216,7 @@ export function PlaylistEditorForm({
                 <div className="flex-1 space-y-2">
                   <Label className="text-xs uppercase tracking-[0.2em] text-white/45">Source {index + 1}</Label>
                   <Input
-                    placeholder={index === 0 ? 'https://youtu.be/... or /audio/ambient.mp3' : 'Paste another source'}
+                    placeholder={index === 0 ? 'https://www.youtube.com/watch?v=... or ...&list=PLAYLIST_ID' : 'Paste another YouTube source'}
                     {...register(`urls.${index}`)}
                     className="h-11 rounded-2xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
                   />

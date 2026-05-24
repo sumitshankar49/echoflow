@@ -90,6 +90,27 @@ export class MusicController {
     return this.musicService.resolveLinkMetadata(url);
   }
 
+  @Get('youtube-playlist-tracks')
+  @ApiOperation({ summary: 'Expand YouTube playlist URL into track URLs' })
+  @ApiQuery({ name: 'url', required: true, description: 'YouTube playlist URL' })
+  @ApiOkResponse({
+    description: 'Expanded YouTube playlist links',
+    schema: {
+      example: {
+        tracks: [
+          'https://www.youtube.com/watch?v=abc123&list=PLxxxx',
+          'https://www.youtube.com/watch?v=def456&list=PLxxxx',
+        ],
+      },
+    },
+  })
+  resolveYouTubePlaylistTracks(
+    @Query('url') url: string,
+    @CurrentUser() _currentUser: AuthenticatedUser,
+  ): Promise<{ tracks: string[] }> {
+    return this.musicService.resolveYouTubePlaylistTracks(url);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get playlist by id' })
   @ApiParam({ name: 'id', description: 'Playlist UUID' })

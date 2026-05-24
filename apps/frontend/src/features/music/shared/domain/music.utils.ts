@@ -1,5 +1,29 @@
 import type { Playlist } from './music.types';
 
+export type PlaylistMood = 'calm' | 'focus' | 'night';
+
+export const moodSuggestions: Array<{
+  value: PlaylistMood;
+  title: string;
+  note: string;
+}> = [
+  {
+    value: 'calm',
+    title: 'Calm Morning Flow',
+    note: 'Start with soft instrumentals and low-tempo piano sessions.',
+  },
+  {
+    value: 'focus',
+    title: 'Deep Focus Sprint',
+    note: 'No-vocal tracks with stable rhythm for coding and planning blocks.',
+  },
+  {
+    value: 'night',
+    title: 'Late Night Reset',
+    note: 'Warm ambient textures to slow the mind before ending the day.',
+  },
+];
+
 export interface PlaylistTrack {
   id: string;
   url: string;
@@ -200,6 +224,60 @@ function getTrackDuration(url: string, index: number) {
   return 140 + ((hashValue(url) + index * 29) % 180);
 }
 
+function isPlaylistMood(value: unknown): value is PlaylistMood {
+  return value === 'calm' || value === 'focus' || value === 'night';
+}
+
+export function extractPlaylistMood(description?: string): PlaylistMood | null {
+  if (!description) {
+    return null;
+  }
+
+  const match = description.match(/^\[mood:(calm|focus|night)\]\s*/i);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  const mood = match[1].toLowerCase();
+  return isPlaylistMood(mood) ? mood : null;
+}
+
+export function stripMoodMetadata(description?: string): string | undefined {
+  if (!description) {
+    return undefined;
+  }
+
+  const cleaned = description.replace(/^\[mood:(calm|focus|night)\]\s*/i, '').trim();
+  return cleaned || undefined;
+}
+
+export function withMoodMetadata(description: string | undefined, mood?: PlaylistMood): string | undefined {
+  const cleanedDescription = stripMoodMetadata(description);
+  if (!mood) {
+    return cleanedDescription;
+  }
+
+  return `[mood:${mood}] ${cleanedDescription || ''}`.trim();
+}
+
+export function getPlaylistMoodCategory(playlist: Pick<Playlist, 'name' | 'description'>): PlaylistMood {
+  const taggedMood = extractPlaylistMood(playlist.description);
+  if (taggedMood) {
+    return taggedMood;
+  }
+
+  const sourceText = `${playlist.name} ${stripMoodMetadata(playlist.description) || ''}`.toLowerCase();
+  if (/night|sleep|late|midnight|moon|reset/.test(sourceText)) {
+    return 'night';
+  }
+
+  if (/focus|deep|sprint|work|study|flow|code|productiv/.test(sourceText)) {
+    return 'focus';
+  }
+
+  return 'calm';
+}
+
 export function trackUrlsToItems(urls: string[]) {
   return urls
     .map((value) => value.trim())
@@ -229,11 +307,12 @@ export function getPlaylistDuration(tracks: PlaylistTrack[]) {
 export function sanitizePlaylistPayload(values: {
   name: string;
   description?: string;
+  mood?: PlaylistMood;
   urls: string[];
 }) {
   return {
     name: values.name.trim(),
-    description: values.description?.trim() || undefined,
+    description: withMoodMetadata(values.description?.trim() || undefined, values.mood),
     urls: values.urls.map((value) => value.trim()).filter(Boolean),
   };
 }

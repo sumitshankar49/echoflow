@@ -35,6 +35,9 @@ let MusicController = class MusicController {
     resolveLinkMetadata(url, _currentUser) {
         return this.musicService.resolveLinkMetadata(url);
     }
+    resolveYouTubePlaylistTracks(url, _currentUser) {
+        return this.musicService.resolveYouTubePlaylistTracks(url);
+    }
     findOne(id, currentUser) {
         return this.musicService.findOne(id, currentUser);
     }
@@ -92,6 +95,27 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], MusicController.prototype, "resolveLinkMetadata", null);
+__decorate([
+    (0, common_1.Get)('youtube-playlist-tracks'),
+    (0, swagger_1.ApiOperation)({ summary: 'Expand YouTube playlist URL into track URLs' }),
+    (0, swagger_1.ApiQuery)({ name: 'url', required: true, description: 'YouTube playlist URL' }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Expanded YouTube playlist links',
+        schema: {
+            example: {
+                tracks: [
+                    'https://www.youtube.com/watch?v=abc123&list=PLxxxx',
+                    'https://www.youtube.com/watch?v=def456&list=PLxxxx',
+                ],
+            },
+        },
+    }),
+    __param(0, (0, common_1.Query)('url')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], MusicController.prototype, "resolveYouTubePlaylistTracks", null);
 __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({ summary: 'Get playlist by id' }),

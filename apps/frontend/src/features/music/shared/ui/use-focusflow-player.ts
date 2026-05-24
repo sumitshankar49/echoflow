@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PlaylistTrack } from '../domain/music.utils';
 
 export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
@@ -8,6 +8,7 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState(0);
+  const lastProgressEventAtRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (!tracks.length) {
@@ -24,7 +25,8 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
 
   useEffect(() => {
     setElapsedSeconds(0);
-    setDurationSeconds(tracks[activeIndex]?.durationSeconds ?? 0);
+    setDurationSeconds(0);
+    lastProgressEventAtRef.current = Date.now();
   }, [activeIndex, tracks]);
 
   const activeTrack = tracks[activeIndex];
@@ -41,6 +43,23 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
     effectiveDurationSeconds > 0
       ? Math.min((elapsedSeconds / effectiveDurationSeconds) * 100, 100)
       : 0;
+
+  useEffect(() => {
+    if (!isPlaying || !activeTrack) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      const recentlyUpdatedByMedia = Date.now() - lastProgressEventAtRef.current < 1600;
+      if (recentlyUpdatedByMedia) {
+        return;
+      }
+
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [activeTrack, isPlaying]);
 
   return {
     activeIndex,
@@ -62,6 +81,7 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
       setIsPlaying(playing);
     },
     onProgressChange: (elapsed: number) => {
+      lastProgressEventAtRef.current = Date.now();
       setElapsedSeconds(Math.max(0, Math.floor(elapsed)));
     },
     onDurationChange: (duration: number) => {
@@ -76,12 +96,10 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
         return;
       }
 
-      if (tracks.length > 1) {
-        setActiveIndex((value) => (value + 1) % tracks.length);
+      setIsPlaying(false);
+      if (durationSeconds > 0) {
+        setElapsedSeconds(durationSeconds);
       }
-
-      setElapsedSeconds(0);
-      setIsPlaying(true);
     },
     onPlaybackError: () => {
       setIsPlaying(false);

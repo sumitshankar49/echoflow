@@ -25,6 +25,7 @@ import {
   getPlaylistDuration,
   getPlaylistGradient,
   getPlaylistMood,
+  stripMoodMetadata,
   trackUrlsToItems,
 } from '../../../shared/domain/music.utils';
 import { FocusFlowMiniPlayer } from '../../../shared/ui/focusflow-mini-player';
@@ -119,7 +120,7 @@ export function PlaylistDetailView({ id }: { id: string }) {
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/65">Mood lane</p>
               <h2 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">{playlist.name}</h2>
               <p className="mt-4 max-w-3xl text-base leading-7 text-white/68">
-                {playlist.description || getPlaylistMood(playlist)}
+                {stripMoodMetadata(playlist.description) || getPlaylistMood(playlist)}
               </p>
             </div>
 
@@ -170,7 +171,7 @@ export function PlaylistDetailView({ id }: { id: string }) {
           isPending={isSaving}
           initialValues={{
             name: playlist.name,
-            description: playlist.description,
+            description: stripMoodMetadata(playlist.description),
             urls: playlist.urls.length ? playlist.urls : [''],
           }}
           onCancel={() => setIsEditing(false)}
@@ -325,7 +326,6 @@ export function PlaylistDetailView({ id }: { id: string }) {
         playlistName={playlist.name}
         track={player.activeTrack ?? tracks[0] ?? null}
         isPlaying={player.isPlaying}
-        progress={player.progress}
         elapsedSeconds={player.elapsedSeconds}
         durationSeconds={player.durationSeconds}
         onTogglePlayback={player.togglePlayback}

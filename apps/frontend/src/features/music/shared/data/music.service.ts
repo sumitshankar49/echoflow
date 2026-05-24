@@ -32,6 +32,48 @@ function extractPlaylists(
   return [];
 }
 
+async function expandYouTubePlaylistUrls(urls: string[]): Promise<string[]> {
+  const result: string[] = [];
+
+  for (const rawValue of urls) {
+    const value = rawValue.trim();
+    if (!value) {
+      continue;
+    }
+
+    let parsed: URL | null = null;
+    try {
+      parsed = new URL(value);
+    } catch {
+      parsed = null;
+    }
+
+    const host = parsed?.hostname?.replace(/^www\./, '').toLowerCase();
+    const listParam = parsed?.searchParams.get('list')?.trim();
+    const isYouTube = host?.includes('youtube.com') || host?.includes('youtu.be');
+
+    if (isYouTube && listParam) {
+      try {
+        const response = await apiClient.get<{ tracks?: string[] }>('/music/playlists/youtube-playlist-tracks', {
+          params: { url: value },
+        });
+
+        const expandedTracks = response.data?.tracks?.filter(Boolean) ?? [];
+        if (expandedTracks.length > 0) {
+          result.push(...expandedTracks);
+          continue;
+        }
+      } catch {
+        // If expansion fails, keep original URL as fallback.
+      }
+    }
+
+    result.push(value);
+  }
+
+  return Array.from(new Set(result));
+}
+
 export const musicService = {
   list: () =>
     apiClient
@@ -39,21 +81,29 @@ export const musicService = {
       .then((r) => extractPlaylists(r.data)),
   get: (id: string) =>
     apiClient.get<PlaylistApiResponse>(`/music/playlists/${id}`).then((r) => normalizePlaylist(r.data)),
-  create: (payload: CreatePlaylistPayload) =>
-    apiClient
+  create: async (payload: CreatePlaylistPayload) => {
+    const expandedUrls = await expandYouTubePlaylistUrls(payload.urls ?? []);
+
+    return apiClient
       .post<PlaylistApiResponse>('/music/playlists', {
         name: payload.name,
         description: payload.description,
-        tracks: payload.urls,
+        tracks: expandedUrls,
       })
-      .then((r) => normalizePlaylist(r.data)),
-  update: (id: string, payload: UpdatePlaylistPayload) =>
-    apiClient
+      .then((r) => normalizePlaylist(r.data));
+  },
+  update: async (id: string, payload: UpdatePlaylistPayload) => {
+    const expandedUrls = payload.urls !== undefined
+      ? await expandYouTubePlaylistUrls(payload.urls)
+      : undefined;
+
+    return apiClient
       .patch<PlaylistApiResponse>(`/music/playlists/${id}`, {
         ...(payload.name !== undefined ? { name: payload.name } : {}),
         ...(payload.description !== undefined ? { description: payload.description } : {}),
-        ...(payload.urls !== undefined ? { tracks: payload.urls } : {}),
+        ...(expandedUrls !== undefined ? { tracks: expandedUrls } : {}),
       })
-      .then((r) => normalizePlaylist(r.data)),
+      .then((r) => normalizePlaylist(r.data));
+  },
   remove: (id: string) => apiClient.delete(`/music/playlists/${id}`).then((r) => r.data),
 };

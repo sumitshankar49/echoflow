@@ -161,6 +161,47 @@ let MusicService = class MusicService {
         }
         return {};
     }
+    async resolveYouTubePlaylistTracks(url) {
+        const trimmed = url?.trim();
+        if (!trimmed) {
+            throw new common_1.BadRequestException('url is required');
+        }
+        let parsed;
+        try {
+            parsed = new URL(trimmed);
+        }
+        catch {
+            throw new common_1.BadRequestException('Invalid URL');
+        }
+        const host = parsed.hostname.replace(/^www\./, '').toLowerCase();
+        if (!host.includes('youtube.com') && !host.includes('youtu.be')) {
+            throw new common_1.BadRequestException('Only YouTube links are supported');
+        }
+        const playlistId = parsed.searchParams.get('list')?.trim();
+        if (!playlistId) {
+            throw new common_1.BadRequestException('No YouTube playlist id found in URL');
+        }
+        const feedUrl = `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`;
+        const feedResponse = await fetch(feedUrl);
+        if (!feedResponse.ok) {
+            throw new common_1.BadRequestException('Unable to fetch YouTube playlist');
+        }
+        const feedXml = await feedResponse.text();
+        const matches = Array.from(feedXml.matchAll(/<yt:videoId>([^<]+)<\/yt:videoId>/g));
+        const seen = new Set();
+        const tracks = matches
+            .map((match) => match[1]?.trim())
+            .filter((videoId) => Boolean(videoId))
+            .filter((videoId) => {
+            if (seen.has(videoId)) {
+                return false;
+            }
+            seen.add(videoId);
+            return true;
+        })
+            .map((videoId) => `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}`);
+        return { tracks };
+    }
 };
 exports.MusicService = MusicService;
 exports.MusicService = MusicService = __decorate([

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +16,8 @@ import {
   Music2,
   Pause,
   Play,
+  SkipBack,
+  SkipForward,
   Sparkles,
   StickyNote,
   Users,
@@ -40,8 +43,72 @@ import { notesQueryKeys } from "@/features/notes/shared/data/notes.query-keys";
 import { remindersService } from "@/features/reminders/shared/data/reminders.service";
 import { circlesService } from "@/features/circles/shared/data/circles.service";
 import { musicService } from "@/features/music/shared/data/music.service";
+import { formatTime } from "@/features/music/shared/domain/music.utils";
 import { usersService } from "@/features/users/shared/data/users.service";
 import { usersQueryKeys } from "@/features/users/shared/data/users.query-keys";
+
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
+
+function extractElapsedSeconds(payload: unknown): number | null {
+  if (typeof payload === "number" && Number.isFinite(payload)) {
+    return payload;
+  }
+
+  if (payload && typeof payload === "object") {
+    const value = payload as {
+      playedSeconds?: number;
+      currentTime?: number;
+      currentTarget?: { currentTime?: number };
+      target?: { currentTime?: number };
+    };
+
+    if (typeof value.playedSeconds === "number" && Number.isFinite(value.playedSeconds)) {
+      return value.playedSeconds;
+    }
+
+    if (typeof value.currentTime === "number" && Number.isFinite(value.currentTime)) {
+      return value.currentTime;
+    }
+
+    if (typeof value.currentTarget?.currentTime === "number" && Number.isFinite(value.currentTarget.currentTime)) {
+      return value.currentTarget.currentTime;
+    }
+
+    if (typeof value.target?.currentTime === "number" && Number.isFinite(value.target.currentTime)) {
+      return value.target.currentTime;
+    }
+  }
+
+  return null;
+}
+
+function extractDurationSeconds(payload: unknown): number | null {
+  if (typeof payload === "number" && Number.isFinite(payload)) {
+    return payload;
+  }
+
+  if (payload && typeof payload === "object") {
+    const value = payload as {
+      duration?: number;
+      currentTarget?: { duration?: number };
+      target?: { duration?: number };
+    };
+
+    if (typeof value.duration === "number" && Number.isFinite(value.duration)) {
+      return value.duration;
+    }
+
+    if (typeof value.currentTarget?.duration === "number" && Number.isFinite(value.currentTarget.duration)) {
+      return value.currentTarget.duration;
+    }
+
+    if (typeof value.target?.duration === "number" && Number.isFinite(value.target.duration)) {
+      return value.target.duration;
+    }
+  }
+
+  return null;
+}
 
 function formatShortDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -163,7 +230,8 @@ export function DashboardOverview() {
   const [selectedMood, setSelectedMood] = useState<MoodKind>("calm");
   const [moodJournalText, setMoodJournalText] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [musicProgress, setMusicProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState(0);
   const [trackIndex, setTrackIndex] = useState(0);
 
   const topReminders = useMemo(
@@ -194,6 +262,33 @@ export function DashboardOverview() {
   const quickPlayerPlaylist = playlists[0];
   const quickPlayerTracks = quickPlayerPlaylist?.urls ?? [];
   const activeTrackUrl = quickPlayerTracks[trackIndex] ?? "";
+  const safeElapsed = Math.max(0, elapsedSeconds);
+  const safeDuration = Math.max(0, durationSeconds);
+  const remainingSeconds = Math.max(0, safeDuration - safeElapsed);
+  const musicProgress = safeDuration > 0 ? Math.min(100, (safeElapsed / safeDuration) * 100) : 0;
+  const hasTracks = quickPlayerTracks.length > 0;
+
+  const goToNextTrack = () => {
+    if (!quickPlayerTracks.length) {
+      return;
+    }
+
+    setTrackIndex((index) => (index + 1) % quickPlayerTracks.length);
+    setElapsedSeconds(0);
+    setDurationSeconds(0);
+  };
+
+  const goToPreviousTrack = () => {
+    if (!quickPlayerTracks.length) {
+      return;
+    }
+
+    setTrackIndex((index) =>
+      index === 0 ? quickPlayerTracks.length - 1 : index - 1,
+    );
+    setElapsedSeconds(0);
+    setDurationSeconds(0);
+  };
 
   const smartSuggestions = useMemo(() => {
     const suggestions: Array<{
@@ -245,27 +340,18 @@ export function DashboardOverview() {
   }, [activeCircles.length, quickPlayerPlaylist, topReminders.length]);
 
   useEffect(() => {
-    if (!isPlaying || !quickPlayerTracks.length) {
-      return undefined;
+    if (!quickPlayerTracks.length) {
+      setTrackIndex(0);
+      setIsPlaying(false);
+      setElapsedSeconds(0);
+      setDurationSeconds(0);
+      return;
     }
 
-    const timer = window.setInterval(() => {
-      setMusicProgress((current) => {
-        if (current >= 100) {
-          setTrackIndex((index) => (index + 1) % quickPlayerTracks.length);
-          return 0;
-        }
-
-        return current + 3;
-      });
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [isPlaying, quickPlayerTracks.length]);
-
-  useEffect(() => {
-    setMusicProgress(0);
-  }, [trackIndex]);
+    if (trackIndex > quickPlayerTracks.length - 1) {
+      setTrackIndex(0);
+    }
+  }, [quickPlayerTracks, trackIndex]);
 
   const quickNavCards = [
     {
@@ -691,6 +777,49 @@ export function DashboardOverview() {
 
           {quickPlayerPlaylist ? (
             <div className="mt-4 rounded-2xl border border-border/70 bg-background/70 p-4">
+              {activeTrackUrl ? (
+                <div
+                  className="pointer-events-none fixed -left-[9999px] top-0 h-0 w-0 overflow-hidden opacity-0"
+                  aria-hidden
+                >
+                  <ReactPlayer
+                    key={activeTrackUrl}
+                    src={activeTrackUrl}
+                    playing={isPlaying}
+                    controls={false}
+                    muted={false}
+                    volume={1}
+                    playsInline
+                    width="0"
+                    height="0"
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onTimeUpdate={(payload) => {
+                      const elapsed = extractElapsedSeconds(payload);
+                      if (elapsed !== null) {
+                        setElapsedSeconds(elapsed);
+                      }
+                    }}
+                    onProgress={(payload) => {
+                      const elapsed = extractElapsedSeconds(payload);
+                      if (elapsed !== null) {
+                        setElapsedSeconds(elapsed);
+                      }
+                    }}
+                    onDurationChange={(payload) => {
+                      const duration = extractDurationSeconds(payload);
+                      if (duration !== null && duration > 0) {
+                        setDurationSeconds(duration);
+                      }
+                    }}
+                    onEnded={goToNextTrack}
+                    onError={() => {
+                      toast.error("This track could not be played from dashboard.");
+                    }}
+                  />
+                </div>
+              ) : null}
+
               <p className="font-medium">{quickPlayerPlaylist.name}</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {activeTrackUrl
@@ -706,12 +835,43 @@ export function DashboardOverview() {
                 />
               </div>
 
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-xl border border-border/70 bg-background/80 px-2 py-1.5">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Elapsed
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold">{formatTime(safeElapsed)}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/80 px-2 py-1.5">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Total
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold">{formatTime(safeDuration)}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/80 px-2 py-1.5">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                    Left
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold">{formatTime(remainingSeconds)}</p>
+                </div>
+              </div>
+
               <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full"
+                  onClick={goToPreviousTrack}
+                  disabled={!hasTracks}
+                >
+                  <SkipBack className="h-4 w-4" />
+                  Previous
+                </Button>
                 <Button
                   type="button"
                   className="rounded-full"
                   onClick={() => setIsPlaying((value) => !value)}
-                  disabled={!quickPlayerTracks.length}
+                  disabled={!hasTracks}
                 >
                   {isPlaying ? (
                     <Pause className="h-4 w-4" />
@@ -724,13 +884,10 @@ export function DashboardOverview() {
                   type="button"
                   variant="outline"
                   className="rounded-full"
-                  disabled={!quickPlayerTracks.length}
-                  onClick={() =>
-                    setTrackIndex(
-                      (index) => (index + 1) % quickPlayerTracks.length,
-                    )
-                  }
+                  disabled={!hasTracks}
+                  onClick={goToNextTrack}
                 >
+                  <SkipForward className="h-4 w-4" />
                   Next track
                 </Button>
                 <Link

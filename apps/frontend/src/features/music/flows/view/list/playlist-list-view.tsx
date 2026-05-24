@@ -8,24 +8,32 @@ import {
   Headphones,
   Heart,
   HeartPulse,
+  Loader2,
   Music2,
   Play,
   Sparkles,
+  Trash2,
   Waves,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CreatePlaylistForm } from '../../manage/create/create-playlist-form';
+import { useRemovePlaylist } from '../../manage/remove/use-remove-playlist';
 import { usePlaylistList } from './use-playlist-list';
 import {
   formatTime,
+  getPlaylistMoodCategory,
   getPlaylistArtwork,
+  moodSuggestions,
   getPlaylistDuration,
   getPlaylistGradient,
   getPlaylistMood,
+  stripMoodMetadata,
   trackUrlsToItems,
+  type PlaylistMood,
 } from '../../../shared/domain/music.utils';
 import { FocusFlowMiniPlayer } from '../../../shared/ui/focusflow-mini-player';
 import { resolveTrackMetadata } from '../../../shared/ui/use-track-metadata';
@@ -33,22 +41,37 @@ import { useFocusFlowPlayer } from '../../../shared/ui/use-focusflow-player';
 
 export function PlaylistListView() {
   const { data: playlists, isPending, isFetching, isError } = usePlaylistList();
+  const { mutateAsync: removePlaylist, isPending: isRemovingPlaylist } = useRemovePlaylist();
   const [showEntryLoader, setShowEntryLoader] = useState(true);
   const [featuredPlaylistId, setFeaturedPlaylistId] = useState<string | null>(null);
+  const [playbackPlaylistId, setPlaybackPlaylistId] = useState<string | null>(null);
+  const [pendingPlaybackIndex, setPendingPlaybackIndex] = useState<number | null>(null);
   const [favoritePlaylistIds, setFavoritePlaylistIds] = useState<string[]>([]);
   const [activeCollection, setActiveCollection] = useState<'all' | 'favorites'>('all');
+  const [activeMoodFilter, setActiveMoodFilter] = useState<'all' | PlaylistMood>('all');
   const [showAllPlaylists, setShowAllPlaylists] = useState(false);
+  const [activeDeletingPlaylistId, setActiveDeletingPlaylistId] = useState<string | null>(null);
   const [playlistArtworkMap, setPlaylistArtworkMap] = useState<Record<string, string>>({});
   const playlistItems = Array.isArray(playlists) ? playlists : [];
   const favoritePlaylists = playlistItems.filter((playlist) => favoritePlaylistIds.includes(playlist.id));
   const collectionPlaylists = activeCollection === 'favorites' ? favoritePlaylists : playlistItems;
-  const hasMoreThanSixPlaylists = collectionPlaylists.length > 6;
-  const visiblePlaylists = showAllPlaylists ? collectionPlaylists : collectionPlaylists.slice(0, 6);
+  const moodFilteredPlaylists =
+    activeMoodFilter === 'all'
+      ? collectionPlaylists
+      : collectionPlaylists.filter((playlist) => getPlaylistMoodCategory(playlist) === activeMoodFilter);
+  const hasMoreThanSixPlaylists = moodFilteredPlaylists.length > 6;
+  const visiblePlaylists = showAllPlaylists ? moodFilteredPlaylists : moodFilteredPlaylists.slice(0, 6);
 
   const featuredPlaylist =
     playlistItems.find((playlist) => playlist.id === featuredPlaylistId) ?? playlistItems[0] ?? null;
+  const playbackPlaylist =
+    playlistItems.find((playlist) => playlist.id === playbackPlaylistId)
+    ?? featuredPlaylist
+    ?? playlistItems[0]
+    ?? null;
+  const playbackTracks = playbackPlaylist ? trackUrlsToItems(playbackPlaylist.urls) : [];
   const featuredTracks = featuredPlaylist ? trackUrlsToItems(featuredPlaylist.urls) : [];
-  const player = useFocusFlowPlayer(featuredTracks);
+  const player = useFocusFlowPlayer(playbackTracks);
   const dynamicTrackGradient = player.activeTrack?.gradientClassName || 'from-cyan-500/12 via-transparent to-emerald-400/10';
 
   useEffect(() => {
@@ -90,11 +113,52 @@ export function PlaylistListView() {
   useEffect(() => {
     if (!playlistItems.length) {
       setFeaturedPlaylistId(null);
+      setPlaybackPlaylistId(null);
       return;
     }
 
-    setFeaturedPlaylistId((current) => current ?? playlistItems[0].id);
+    setFeaturedPlaylistId((current) => {
+      if (!current) {
+        return playlistItems[0].id;
+      }
+
+      const stillExists = playlistItems.some((playlist) => playlist.id === current);
+      return stillExists ? current : playlistItems[0].id;
+    });
+
+    setPlaybackPlaylistId((current) => {
+      if (!current) {
+        return playlistItems[0].id;
+      }
+
+      const stillExists = playlistItems.some((playlist) => playlist.id === current);
+      return stillExists ? current : playlistItems[0].id;
+    });
   }, [playlistItems]);
+
+  useEffect(() => {
+    if (!playlistItems.length && activeCollection === 'favorites') {
+      setActiveCollection('all');
+      return;
+    }
+
+    const validIds = new Set(playlistItems.map((playlist) => playlist.id));
+    setFavoritePlaylistIds((current) => current.filter((id) => validIds.has(id)));
+  }, [activeCollection, playlistItems]);
+
+  useEffect(() => {
+    if (pendingPlaybackIndex === null) {
+      return;
+    }
+
+    if (!playbackTracks[pendingPlaybackIndex]) {
+      setPendingPlaybackIndex(null);
+      return;
+    }
+
+    player.playTrack(pendingPlaybackIndex);
+    setPendingPlaybackIndex(null);
+  }, [pendingPlaybackIndex, playbackTracks, player]);
 
   useEffect(() => {
     if (!hasMoreThanSixPlaylists && showAllPlaylists) {
@@ -104,7 +168,7 @@ export function PlaylistListView() {
 
   useEffect(() => {
     setShowAllPlaylists(false);
-  }, [activeCollection]);
+  }, [activeCollection, activeMoodFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -175,6 +239,55 @@ export function PlaylistListView() {
 
       return [...current, playlistId];
     });
+  };
+
+  const handleRemovePlaylist = async (playlistId: string, playlistName: string) => {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(`Remove playlist "${playlistName}"? This cannot be undone.`);
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      setActiveDeletingPlaylistId(playlistId);
+      await removePlaylist(playlistId);
+      toast.success('Playlist removed');
+    } catch {
+      toast.error('Unable to remove playlist');
+    } finally {
+      setActiveDeletingPlaylistId(null);
+    }
+  };
+
+  const handleRemoveAllPlaylists = async () => {
+    if (!playlistItems.length) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        `Remove all ${playlistItems.length} playlists? This will clear your current playlist data and cannot be undone.`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    const ids = playlistItems.map((playlist) => playlist.id);
+    setActiveDeletingPlaylistId('__bulk__');
+
+    try {
+      for (const id of ids) {
+        await removePlaylist(id);
+      }
+      toast.success('All playlists removed');
+    } catch {
+      toast.error('Unable to remove all playlists');
+    } finally {
+      setActiveDeletingPlaylistId(null);
+    }
   };
 
   if (showLoading) {
@@ -277,7 +390,7 @@ export function PlaylistListView() {
                     <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/65">Current highlight</p>
                     <h2 className="mt-2 line-clamp-2 text-3xl font-semibold tracking-tight">{featuredPlaylist.name}</h2>
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-white/68">
-                      {featuredPlaylist.description || getPlaylistMood(featuredPlaylist)}
+                      {stripMoodMetadata(featuredPlaylist.description) || getPlaylistMood(featuredPlaylist)}
                     </p>
                   </div>
 
@@ -300,11 +413,33 @@ export function PlaylistListView() {
                     <Button
                       type="button"
                       className="rounded-full bg-white px-5 text-slate-950 hover:bg-cyan-50"
-                      onClick={() => player.playTrack(0)}
+                      onClick={() => {
+                        if (!featuredPlaylist || !featuredTracks.length) {
+                          return;
+                        }
+
+                        setPlaybackPlaylistId(featuredPlaylist.id);
+                        setPendingPlaybackIndex(0);
+                      }}
                       disabled={!featuredTracks.length}
                     >
                       <Play className="h-4 w-4 fill-current" />
                       Start flow
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full border-white/10 bg-white/5 text-white hover:bg-white/10"
+                      onClick={() => {
+                        if (typeof window === 'undefined') {
+                          return;
+                        }
+
+                        const section = document.getElementById('focusflow-create-playlist');
+                        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}
+                    >
+                      Create New Playlist
                     </Button>
                     <Link
                       href={`/music/${featuredPlaylist.id}`}
@@ -323,36 +458,38 @@ export function PlaylistListView() {
           </div>
         </div>
 
-        <CreatePlaylistForm className="xl:sticky xl:top-6" />
+        <div id="focusflow-create-playlist">
+          <CreatePlaylistForm className="xl:sticky xl:top-6" />
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        {[
-          {
-            title: 'Calm Morning Flow',
-            note: 'Start with soft instrumentals and low-tempo piano sessions.',
-          },
-          {
-            title: 'Deep Focus Sprint',
-            note: 'No-vocal tracks with stable rhythm for coding and planning blocks.',
-          },
-          {
-            title: 'Late Night Reset',
-            note: 'Warm ambient textures to slow the mind before ending the day.',
-          },
-        ].map((suggestion, index) => (
+        {moodSuggestions.map((suggestion, index) => {
+          const isActive = activeMoodFilter === suggestion.value;
+
+          return (
           <motion.article
             key={suggestion.title}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.06 }}
-            className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm"
+            className={cn(
+              'cursor-pointer rounded-2xl border bg-card/70 p-4 shadow-sm transition hover:border-cyan-300/45 hover:shadow-md',
+              isActive ? 'border-cyan-400/45 ring-1 ring-cyan-300/25' : 'border-border/70',
+            )}
+            onClick={() => {
+              setActiveMoodFilter((current) => (current === suggestion.value ? 'all' : suggestion.value));
+            }}
           >
             <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Mood suggestion</p>
             <h3 className="mt-2 text-lg font-semibold tracking-tight">{suggestion.title}</h3>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">{suggestion.note}</p>
+            <p className="mt-2 text-xs text-cyan-600/80">
+              {isActive ? 'Active filter · click to clear' : 'Click to show matching playlists'}
+            </p>
           </motion.article>
-        ))}
+          );
+        })}
       </section>
 
       <section className="space-y-4">
@@ -404,19 +541,55 @@ export function PlaylistListView() {
               <Headphones className="h-4 w-4 text-cyan-500" />
               Hover a card to feature it in the player
             </div>
+            {activeMoodFilter !== 'all' ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => setActiveMoodFilter('all')}
+              >
+                Clear mood filter
+              </Button>
+            ) : null}
+            {playlistItems.length > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full border-rose-500/30 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
+                onClick={() => {
+                  void handleRemoveAllPlaylists();
+                }}
+                disabled={isRemovingPlaylist || activeDeletingPlaylistId === '__bulk__'}
+              >
+                {activeDeletingPlaylistId === '__bulk__' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Remove all playlists
+              </Button>
+            ) : null}
           </div>
         </div>
 
-        {collectionPlaylists.length === 0 ? (
+        {moodFilteredPlaylists.length === 0 ? (
           <div className="rounded-[2rem] border border-dashed border-border/80 bg-background/70 p-10 text-center shadow-sm backdrop-blur">
             <div className="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-600">
               <Music2 className="h-6 w-6" />
             </div>
             <p className="text-lg font-medium">
-              {activeCollection === 'favorites' ? 'No favorites yet' : 'No playlists yet'}
+              {activeMoodFilter !== 'all'
+                ? 'No playlists for this mood yet'
+                : activeCollection === 'favorites'
+                  ? 'No favorites yet'
+                  : 'No playlists yet'}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {activeCollection === 'favorites'
+              {activeMoodFilter !== 'all'
+                ? 'Create a playlist with this mood suggestion to see it here.'
+                : activeCollection === 'favorites'
                 ? 'Tap the heart icon on any playlist to save it in favorites.'
                 : 'Create one above and start building a more relaxing listening routine.'}
             </p>
@@ -444,13 +617,23 @@ export function PlaylistListView() {
               const isFavorite = favoritePlaylistIds.includes(playlist.id);
 
               return (
-                <article
+                <motion.article
                   key={playlist.id}
                   className={cn(
-                    'group relative w-full max-w-[330px] overflow-hidden rounded-[1.4rem] border bg-card/80 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_20px_42px_-26px_rgba(14,165,233,0.35)]',
+                    'group relative w-full max-w-[350px] overflow-hidden rounded-[1.4rem] border bg-card/80 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_20px_42px_-26px_rgba(14,165,233,0.35)]',
                     isFeatured ? 'border-cyan-400/40 ring-1 ring-cyan-300/25' : 'border-border/70',
                   )}
-                  onMouseEnter={() => setFeaturedPlaylistId(playlist.id)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -4, scale: 1.01 }}
+                  transition={{ duration: 0.28 }}
+                  onMouseEnter={() => {
+                    if (player.isPlaying) {
+                      return;
+                    }
+
+                    setFeaturedPlaylistId(playlist.id);
+                  }}
                 >
                   <div className={cn('relative aspect-[1.18] overflow-hidden bg-gradient-to-br', getPlaylistGradient(playlist.name))}>
                     {coverImage ? (
@@ -484,7 +667,8 @@ export function PlaylistListView() {
                         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/15 text-white opacity-100 transition duration-300 hover:scale-105 hover:bg-white/25"
                         onClick={() => {
                           setFeaturedPlaylistId(playlist.id);
-                          player.playTrack(0);
+                          setPlaybackPlaylistId(playlist.id);
+                          setPendingPlaybackIndex(0);
                         }}
                       >
                         <Play className="h-4 w-4 fill-current" />
@@ -492,10 +676,10 @@ export function PlaylistListView() {
                     </div>
                   </div>
 
-                  <div className="space-y-3 p-3.5">
+                  <div className="space-y-3 p-3.5 sm:p-4">
                     <div>
                       <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">
-                        {playlist.description || getPlaylistMood(playlist)}
+                        {stripMoodMetadata(playlist.description) || getPlaylistMood(playlist)}
                       </p>
                     </div>
 
@@ -520,16 +704,35 @@ export function PlaylistListView() {
                         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Estimated run</p>
                         <p className="mt-1 text-sm font-medium text-foreground">{formatTime(getPlaylistDuration(tracks))}</p>
                       </div>
-                      <Link
-                        href={`/music/${playlist.id}`}
-                        className={cn(buttonVariants({ variant: 'ghost' }), 'h-9 rounded-full px-3')}
-                      >
-                        Open playlist
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-full text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
+                          title="Remove playlist"
+                          onClick={() => {
+                            void handleRemovePlaylist(playlist.id, playlist.name);
+                          }}
+                          disabled={isRemovingPlaylist}
+                        >
+                          {activeDeletingPlaylistId === playlist.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Link
+                          href={`/music/${playlist.id}`}
+                          className={cn(buttonVariants({ variant: 'ghost' }), 'h-9 rounded-full px-3')}
+                        >
+                          Open playlist
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </article>
+                </motion.article>
               );
             })}
           </div>
@@ -551,10 +754,9 @@ export function PlaylistListView() {
 
       {featuredPlaylist ? (
         <FocusFlowMiniPlayer
-          playlistName={featuredPlaylist.name}
-          track={player.activeTrack ?? featuredTracks[0] ?? null}
+          playlistName={playbackPlaylist?.name ?? featuredPlaylist.name}
+          track={player.activeTrack ?? playbackTracks[0] ?? null}
           isPlaying={player.isPlaying}
-          progress={player.progress}
           elapsedSeconds={player.elapsedSeconds}
           durationSeconds={player.durationSeconds}
           onTogglePlayback={player.togglePlayback}

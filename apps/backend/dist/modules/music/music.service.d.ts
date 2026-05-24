@@ -20,4 +20,7 @@ export declare class MusicService {
         artist?: string;
         thumbnailUrl?: string;
     }>;
+    resolveYouTubePlaylistTracks(url: string): Promise<{
+        tracks: string[];
+    }>;
 }

@@ -15,6 +15,9 @@ export declare class MusicController {
         artist?: string;
         thumbnailUrl?: string;
     }>;
+    resolveYouTubePlaylistTracks(url: string, _currentUser: AuthenticatedUser): Promise<{
+        tracks: string[];
+    }>;
     findOne(id: string, currentUser: AuthenticatedUser): Promise<Playlist>;
     update(id: string, updatePlaylistDto: UpdatePlaylistDto, currentUser: AuthenticatedUser): Promise<Playlist>;
     remove(id: string, currentUser: AuthenticatedUser): Promise<{
