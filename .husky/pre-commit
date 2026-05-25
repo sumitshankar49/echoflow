@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 set -e
 
-cd apps/frontend
-pnpm run build
+pnpm --dir apps/frontend run check
+pnpm --dir apps/frontend run build
+pnpm --dir apps/backend run build
