@@ -5,7 +5,7 @@ export declare class Playlist {
     description: string | null;
     tracks: string[] | null;
     userId: string;
-    user: User;
+    user?: User;
     createdAt: Date;
     updatedAt: Date;
 }

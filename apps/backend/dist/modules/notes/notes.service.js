@@ -8,99 +8,157 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotesService = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("@nestjs/typeorm");
-const typeorm_2 = require("typeorm");
+const client_1 = require("../../generated/prisma/client");
 const paginated_response_dto_1 = require("../../common/dto/paginated-response.dto");
-const note_entity_1 = require("./entities/note.entity");
+const prisma_service_1 = require("../../prisma/prisma.service");
 let NotesService = class NotesService {
-    constructor(notesRepository) {
-        this.notesRepository = notesRepository;
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    mapTagsFromDb(tags) {
+        if (!tags) {
+            return null;
+        }
+        const parsed = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+        return parsed.length > 0 ? parsed : null;
+    }
+    mapTagsToDb(tags) {
+        if (tags === undefined) {
+            return undefined;
+        }
+        const normalized = tags.map((tag) => tag.trim()).filter(Boolean);
+        return normalized.length > 0 ? normalized.join(',') : null;
+    }
+    toNoteEntity(record) {
+        return {
+            ...record,
+            tags: this.mapTagsFromDb(record.tags),
+            isFavorite: Boolean(record.isFavorite),
+        };
     }
     async create(createNoteDto, currentUser) {
-        const note = this.notesRepository.create({
-            ...createNoteDto,
-            tags: createNoteDto.tags?.map((tag) => tag.trim()).filter(Boolean),
-            userId: currentUser.userId,
+        const created = await this.prisma.note.create({
+            data: {
+                title: createNoteDto.title,
+                content: createNoteDto.content,
+                voiceUrl: createNoteDto.voiceUrl ?? null,
+                tags: this.mapTagsToDb(createNoteDto.tags) ?? null,
+                isFavorite: createNoteDto.isFavorite ? 1 : 0,
+                userId: currentUser.userId,
+            },
         });
-        return this.notesRepository.save(note);
+        return this.toNoteEntity(created);
     }
     async findAll(currentUser, filter) {
         const page = filter?.page ?? 1;
         const limit = filter?.limit ?? 20;
         const skip = (page - 1) * limit;
-        const qb = this.notesRepository
-            .createQueryBuilder('note')
-            .where('note.userId = :userId', { userId: currentUser.userId });
-        if (filter?.isFavorite !== undefined) {
-            qb.andWhere('note.isFavorite = :isFavorite', { isFavorite: filter.isFavorite });
+        const where = {
+            userId: currentUser.userId,
+            ...(filter?.isFavorite !== undefined ? { isFavorite: filter.isFavorite ? 1 : 0 } : {}),
+        };
+        let data;
+        let total;
+        if (filter?.tag?.trim()) {
+            const trimmedTag = filter.tag.trim();
+            data = await this.prisma.$queryRaw(client_1.Prisma.sql `
+          SELECT id, title, content, voiceUrl, tags, isFavorite, userId, createdAt, updatedAt
+          FROM notes
+          WHERE userId = ${currentUser.userId}
+            ${filter?.isFavorite !== undefined ? client_1.Prisma.sql `AND isFavorite = ${filter.isFavorite ? 1 : 0}` : client_1.Prisma.empty}
+            AND FIND_IN_SET(${trimmedTag}, tags) > 0
+          ORDER BY updatedAt DESC
+          LIMIT ${limit} OFFSET ${skip}
+        `);
+            const countRows = await this.prisma.$queryRaw(client_1.Prisma.sql `
+          SELECT COUNT(*) AS total
+          FROM notes
+          WHERE userId = ${currentUser.userId}
+            ${filter?.isFavorite !== undefined ? client_1.Prisma.sql `AND isFavorite = ${filter.isFavorite ? 1 : 0}` : client_1.Prisma.empty}
+            AND FIND_IN_SET(${trimmedTag}, tags) > 0
+        `);
+            const rawTotal = countRows[0]?.total ?? 0;
+            total = Number(rawTotal);
         }
-        if (filter?.tag) {
-            qb.andWhere('FIND_IN_SET(:tag, note.tags) > 0', { tag: filter.tag.trim() });
+        else {
+            [data, total] = await this.prisma.$transaction([
+                this.prisma.note.findMany({
+                    where,
+                    orderBy: { updatedAt: 'desc' },
+                    skip,
+                    take: limit,
+                }),
+                this.prisma.note.count({ where }),
+            ]);
         }
-        const [data, total] = await qb
-            .orderBy('note.updatedAt', 'DESC')
-            .skip(skip)
-            .take(limit)
-            .getManyAndCount();
-        return new paginated_response_dto_1.PaginatedResponseDto(data, total, page, limit);
+        return new paginated_response_dto_1.PaginatedResponseDto(data.map((item) => this.toNoteEntity(item)), total, page, limit);
     }
     async search(query, currentUser) {
         const normalizedQuery = query.trim().toLowerCase();
         if (!normalizedQuery) {
-            return this.notesRepository
-                .createQueryBuilder('note')
-                .where('note.userId = :userId', { userId: currentUser.userId })
-                .orderBy('note.updatedAt', 'DESC')
-                .getMany();
+            const notes = await this.prisma.note.findMany({
+                where: { userId: currentUser.userId },
+                orderBy: { updatedAt: 'desc' },
+            });
+            return notes.map((item) => this.toNoteEntity(item));
         }
-        return this.notesRepository
-            .createQueryBuilder('note')
-            .where('note.userId = :userId', { userId: currentUser.userId })
-            .andWhere('(LOWER(note.title) LIKE :query OR LOWER(note.content) LIKE :query)', {
-            query: `%${normalizedQuery}%`,
-        })
-            .orderBy('note.updatedAt', 'DESC')
-            .getMany();
+        const notes = await this.prisma.note.findMany({
+            where: {
+                userId: currentUser.userId,
+                OR: [
+                    {
+                        title: {
+                            contains: normalizedQuery,
+                        },
+                    },
+                    {
+                        content: {
+                            contains: normalizedQuery,
+                        },
+                    },
+                ],
+            },
+            orderBy: { updatedAt: 'desc' },
+        });
+        return notes.map((item) => this.toNoteEntity(item));
     }
     async findOne(id, currentUser) {
-        const note = await this.notesRepository.findOne({
-            where: {
-                id,
-                userId: currentUser.userId,
-            },
+        const note = await this.prisma.note.findFirst({
+            where: { id, userId: currentUser.userId },
         });
         if (!note) {
             throw new common_1.NotFoundException('Note not found');
         }
-        return note;
+        return this.toNoteEntity(note);
     }
     async update(id, updateNoteDto, currentUser) {
-        const note = await this.findOne(id, currentUser);
-        const nextTags = updateNoteDto.tags
-            ? updateNoteDto.tags.map((tag) => tag.trim()).filter(Boolean)
-            : note.tags;
-        const updatedNote = this.notesRepository.merge(note, {
-            ...updateNoteDto,
-            tags: nextTags,
+        await this.findOne(id, currentUser);
+        const updatedNote = await this.prisma.note.update({
+            where: { id },
+            data: {
+                ...(updateNoteDto.title !== undefined ? { title: updateNoteDto.title } : {}),
+                ...(updateNoteDto.content !== undefined ? { content: updateNoteDto.content } : {}),
+                ...(updateNoteDto.voiceUrl !== undefined ? { voiceUrl: updateNoteDto.voiceUrl } : {}),
+                ...(updateNoteDto.isFavorite !== undefined
+                    ? { isFavorite: updateNoteDto.isFavorite ? 1 : 0 }
+                    : {}),
+                ...(updateNoteDto.tags !== undefined ? { tags: this.mapTagsToDb(updateNoteDto.tags) } : {}),
+            },
         });
-        return this.notesRepository.save(updatedNote);
+        return this.toNoteEntity(updatedNote);
     }
     async remove(id, currentUser) {
-        const note = await this.findOne(id, currentUser);
-        await this.notesRepository.remove(note);
+        await this.findOne(id, currentUser);
+        await this.prisma.note.delete({ where: { id } });
         return { message: 'Note deleted successfully' };
     }
 };
 exports.NotesService = NotesService;
 exports.NotesService = NotesService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(note_entity_1.Note)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], NotesService);
 //# sourceMappingURL=notes.service.js.map

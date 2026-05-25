@@ -5,7 +5,6 @@ import { APP_GUARD } from '@nestjs/core';
 import type { StringValue } from 'ms';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
 import configuration from './config/configuration';
@@ -16,6 +15,7 @@ import { MusicModule } from './modules/music/music.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
 import { UsersModule } from './modules/users/users.module';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
@@ -43,16 +43,7 @@ import { UsersModule } from './modules/users/users.module';
         },
       }),
     }),
-    TypeOrmModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'mysql',
-        url: configService.getOrThrow<string>('database.url'),
-        synchronize: configService.get<boolean>('database.synchronize', false),
-        logging: configService.get<boolean>('database.logging', false),
-        autoLoadEntities: true,
-      }),
-    }),
+    PrismaModule,
     AuthModule,
     CirclesModule,
     MoodModule,

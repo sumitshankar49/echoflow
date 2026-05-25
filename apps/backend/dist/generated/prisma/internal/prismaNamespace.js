@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.defineExtension = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
+exports.defineExtension = exports.MoodOrderByRelevanceFieldEnum = exports.RevokedTokenOrderByRelevanceFieldEnum = exports.ReminderOrderByRelevanceFieldEnum = exports.PlaylistOrderByRelevanceFieldEnum = exports.CircleSharedNoteOrderByRelevanceFieldEnum = exports.CircleMemberOrderByRelevanceFieldEnum = exports.CircleOrderByRelevanceFieldEnum = exports.NoteOrderByRelevanceFieldEnum = exports.PasswordResetTokenOrderByRelevanceFieldEnum = exports.UserOrderByRelevanceFieldEnum = exports.NullsOrder = exports.SortOrder = exports.MoodScalarFieldEnum = exports.RevokedTokenScalarFieldEnum = exports.ReminderScalarFieldEnum = exports.PlaylistScalarFieldEnum = exports.CircleSharedNoteScalarFieldEnum = exports.CircleMemberScalarFieldEnum = exports.CircleScalarFieldEnum = exports.NoteScalarFieldEnum = exports.PasswordResetTokenScalarFieldEnum = exports.UserScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
 const runtime = __importStar(require("@prisma/client/runtime/client"));
 exports.PrismaClientKnownRequestError = runtime.PrismaClientKnownRequestError;
 exports.PrismaClientUnknownRequestError = runtime.PrismaClientUnknownRequestError;
@@ -59,12 +59,181 @@ exports.NullTypes = {
 exports.DbNull = runtime.DbNull;
 exports.JsonNull = runtime.JsonNull;
 exports.AnyNull = runtime.AnyNull;
-exports.ModelName = {};
+exports.ModelName = {
+    User: 'User',
+    PasswordResetToken: 'PasswordResetToken',
+    Note: 'Note',
+    Circle: 'Circle',
+    CircleMember: 'CircleMember',
+    CircleSharedNote: 'CircleSharedNote',
+    Playlist: 'Playlist',
+    Reminder: 'Reminder',
+    RevokedToken: 'RevokedToken',
+    Mood: 'Mood'
+};
 exports.TransactionIsolationLevel = runtime.makeStrictEnum({
     ReadUncommitted: 'ReadUncommitted',
     ReadCommitted: 'ReadCommitted',
     RepeatableRead: 'RepeatableRead',
     Serializable: 'Serializable'
 });
+exports.UserScalarFieldEnum = {
+    id: 'id',
+    name: 'name',
+    email: 'email',
+    password: 'password',
+    gender: 'gender',
+    dob: 'dob',
+    mobileNumber: 'mobileNumber',
+    relationshipStatus: 'relationshipStatus',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.PasswordResetTokenScalarFieldEnum = {
+    id: 'id',
+    userId: 'userId',
+    tokenHash: 'tokenHash',
+    expiresAt: 'expiresAt',
+    usedAt: 'usedAt',
+    createdAt: 'createdAt'
+};
+exports.NoteScalarFieldEnum = {
+    id: 'id',
+    title: 'title',
+    content: 'content',
+    voiceUrl: 'voiceUrl',
+    tags: 'tags',
+    isFavorite: 'isFavorite',
+    userId: 'userId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.CircleScalarFieldEnum = {
+    id: 'id',
+    name: 'name',
+    description: 'description',
+    ownerId: 'ownerId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.CircleMemberScalarFieldEnum = {
+    id: 'id',
+    circleId: 'circleId',
+    userId: 'userId',
+    role: 'role',
+    status: 'status',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.CircleSharedNoteScalarFieldEnum = {
+    id: 'id',
+    circleId: 'circleId',
+    noteId: 'noteId',
+    sharedByUserId: 'sharedByUserId',
+    createdAt: 'createdAt'
+};
+exports.PlaylistScalarFieldEnum = {
+    id: 'id',
+    name: 'name',
+    description: 'description',
+    tracks: 'tracks',
+    userId: 'userId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.ReminderScalarFieldEnum = {
+    id: 'id',
+    title: 'title',
+    description: 'description',
+    remindAt: 'remindAt',
+    isCompleted: 'isCompleted',
+    userId: 'userId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.RevokedTokenScalarFieldEnum = {
+    id: 'id',
+    token: 'token',
+    expiresAt: 'expiresAt'
+};
+exports.MoodScalarFieldEnum = {
+    id: 'id',
+    mood: 'mood',
+    userId: 'userId',
+    recordedAt: 'recordedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
+exports.SortOrder = {
+    asc: 'asc',
+    desc: 'desc'
+};
+exports.NullsOrder = {
+    first: 'first',
+    last: 'last'
+};
+exports.UserOrderByRelevanceFieldEnum = {
+    id: 'id',
+    name: 'name',
+    email: 'email',
+    password: 'password',
+    gender: 'gender',
+    mobileNumber: 'mobileNumber',
+    relationshipStatus: 'relationshipStatus'
+};
+exports.PasswordResetTokenOrderByRelevanceFieldEnum = {
+    id: 'id',
+    userId: 'userId',
+    tokenHash: 'tokenHash'
+};
+exports.NoteOrderByRelevanceFieldEnum = {
+    id: 'id',
+    title: 'title',
+    content: 'content',
+    voiceUrl: 'voiceUrl',
+    tags: 'tags',
+    userId: 'userId'
+};
+exports.CircleOrderByRelevanceFieldEnum = {
+    id: 'id',
+    name: 'name',
+    description: 'description',
+    ownerId: 'ownerId'
+};
+exports.CircleMemberOrderByRelevanceFieldEnum = {
+    id: 'id',
+    circleId: 'circleId',
+    userId: 'userId',
+    role: 'role',
+    status: 'status'
+};
+exports.CircleSharedNoteOrderByRelevanceFieldEnum = {
+    id: 'id',
+    circleId: 'circleId',
+    noteId: 'noteId',
+    sharedByUserId: 'sharedByUserId'
+};
+exports.PlaylistOrderByRelevanceFieldEnum = {
+    id: 'id',
+    name: 'name',
+    description: 'description',
+    tracks: 'tracks',
+    userId: 'userId'
+};
+exports.ReminderOrderByRelevanceFieldEnum = {
+    id: 'id',
+    title: 'title',
+    description: 'description',
+    userId: 'userId'
+};
+exports.RevokedTokenOrderByRelevanceFieldEnum = {
+    id: 'id',
+    token: 'token'
+};
+exports.MoodOrderByRelevanceFieldEnum = {
+    id: 'id',
+    mood: 'mood',
+    userId: 'userId'
+};
 exports.defineExtension = runtime.Extensions.defineExtension;
 //# sourceMappingURL=prismaNamespace.js.map

@@ -4,35 +4,66 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Playlist } from './entities/playlist.entity';
 
 @Injectable()
 export class MusicService {
-  constructor(
-    @InjectRepository(Playlist)
-    private readonly playlistsRepository: Repository<Playlist>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  private mapTracksToDb(tracks: string[] | undefined): string | null | undefined {
+    if (tracks === undefined) {
+      return undefined;
+    }
+
+    const normalized = tracks.map((track) => track.trim()).filter(Boolean);
+    return normalized.length > 0 ? normalized.join(',') : null;
+  }
+
+  private mapTracksFromDb(tracks: string | null): string[] | null {
+    if (!tracks) {
+      return null;
+    }
+
+    const parsed = tracks.split(',').map((track) => track.trim()).filter(Boolean);
+    return parsed.length > 0 ? parsed : null;
+  }
+
+  private toPlaylistEntity(record: {
+    id: string;
+    name: string;
+    description: string | null;
+    tracks: string | null;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): Playlist {
+    return {
+      ...record,
+      tracks: this.mapTracksFromDb(record.tracks),
+    };
+  }
 
   async create(
     createPlaylistDto: CreatePlaylistDto,
     currentUser: AuthenticatedUser,
   ): Promise<Playlist> {
-    const playlist = this.playlistsRepository.create({
-      name: createPlaylistDto.name,
-      description: createPlaylistDto.description ?? null,
-      tracks: createPlaylistDto.tracks?.map((track) => track.trim()).filter(Boolean) ?? null,
-      userId: currentUser.userId,
+    const playlist = await this.prisma.playlist.create({
+      data: {
+        name: createPlaylistDto.name,
+        description: createPlaylistDto.description ?? null,
+        tracks: this.mapTracksToDb(createPlaylistDto.tracks) ?? null,
+        userId: currentUser.userId,
+      },
     });
 
-    return this.playlistsRepository.save(playlist);
+    return this.toPlaylistEntity(playlist);
   }
 
   async findAll(currentUser: AuthenticatedUser, pagination?: PaginationQueryDto): Promise<PaginatedResponseDto<Playlist>> {
@@ -40,29 +71,29 @@ export class MusicService {
     const limit = pagination?.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const [data, total] = await this.playlistsRepository.findAndCount({
-      where: { userId: currentUser.userId },
-      order: { updatedAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.playlist.findMany({
+        where: { userId: currentUser.userId },
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.playlist.count({ where: { userId: currentUser.userId } }),
+    ]);
 
-    return new PaginatedResponseDto(data, total, page, limit);
+    return new PaginatedResponseDto(data.map((item) => this.toPlaylistEntity(item)), total, page, limit);
   }
 
   async findOne(id: string, currentUser: AuthenticatedUser): Promise<Playlist> {
-    const playlist = await this.playlistsRepository.findOne({
-      where: {
-        id,
-        userId: currentUser.userId,
-      },
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { id, userId: currentUser.userId },
     });
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
     }
 
-    return playlist;
+    return this.toPlaylistEntity(playlist);
   }
 
   async update(
@@ -70,7 +101,7 @@ export class MusicService {
     updatePlaylistDto: UpdatePlaylistDto,
     currentUser: AuthenticatedUser,
   ): Promise<Playlist> {
-    const playlist = await this.playlistsRepository.findOne({ where: { id } });
+    const playlist = await this.prisma.playlist.findUnique({ where: { id } });
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
@@ -80,19 +111,24 @@ export class MusicService {
       throw new ForbiddenException('You do not have permission to update this playlist');
     }
 
-    const updatedPlaylist = this.playlistsRepository.merge(playlist, {
-      name: updatePlaylistDto.name ?? playlist.name,
-      description: updatePlaylistDto.description !== undefined ? updatePlaylistDto.description : playlist.description,
-      tracks: updatePlaylistDto.tracks !== undefined
-        ? (updatePlaylistDto.tracks?.map((t) => t.trim()).filter(Boolean) ?? null)
-        : playlist.tracks,
+    const updatedPlaylist = await this.prisma.playlist.update({
+      where: { id },
+      data: {
+        ...(updatePlaylistDto.name !== undefined ? { name: updatePlaylistDto.name } : {}),
+        ...(updatePlaylistDto.description !== undefined
+          ? { description: updatePlaylistDto.description }
+          : {}),
+        ...(updatePlaylistDto.tracks !== undefined
+          ? { tracks: this.mapTracksToDb(updatePlaylistDto.tracks) }
+          : {}),
+      },
     });
 
-    return this.playlistsRepository.save(updatedPlaylist);
+    return this.toPlaylistEntity(updatedPlaylist);
   }
 
   async remove(id: string, currentUser: AuthenticatedUser): Promise<{ message: string }> {
-    const playlist = await this.playlistsRepository.findOne({ where: { id } });
+    const playlist = await this.prisma.playlist.findUnique({ where: { id } });
 
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
@@ -102,7 +138,7 @@ export class MusicService {
       throw new ForbiddenException('You do not have permission to delete this playlist');
     }
 
-    await this.playlistsRepository.remove(playlist);
+    await this.prisma.playlist.delete({ where: { id } });
     return { message: 'Playlist deleted successfully' };
   }
 

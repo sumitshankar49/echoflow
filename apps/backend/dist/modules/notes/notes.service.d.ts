@@ -1,13 +1,16 @@
-import { Repository } from 'typeorm';
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreateNoteDto } from './dto/create-note.dto';
 import { NoteFilterDto } from './dto/note-filter.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { Note } from './entities/note.entity';
 export declare class NotesService {
-    private readonly notesRepository;
-    constructor(notesRepository: Repository<Note>);
+    private readonly prisma;
+    constructor(prisma: PrismaService);
+    private mapTagsFromDb;
+    private mapTagsToDb;
+    private toNoteEntity;
     create(createNoteDto: CreateNoteDto, currentUser: AuthenticatedUser): Promise<Note>;
     findAll(currentUser: AuthenticatedUser, filter?: NoteFilterDto): Promise<PaginatedResponseDto<Note>>;
     search(query: string, currentUser: AuthenticatedUser): Promise<Note[]>;

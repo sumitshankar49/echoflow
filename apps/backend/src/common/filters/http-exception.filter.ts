@@ -5,8 +5,8 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { Request, Response } from 'express';
-import { QueryFailedError } from 'typeorm';
 
 interface HttpErrorBody {
   statusCode: number;
@@ -16,11 +16,6 @@ interface HttpErrorBody {
   message: string | string[];
   error?: string;
   details?: unknown;
-}
-
-interface DatabaseErrorShape {
-  code?: string;
-  sqlMessage?: string;
 }
 
 @Catch()
@@ -80,9 +75,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
       };
     }
 
-    if (exception instanceof QueryFailedError) {
-      const databaseError = exception as QueryFailedError & DatabaseErrorShape;
-      return this.mapDatabaseError(databaseError, isDevelopment);
+    if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      return this.mapPrismaError(exception, isDevelopment);
+    }
+
+    if (exception instanceof Prisma.PrismaClientUnknownRequestError) {
+      return {
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+        message: 'Database operation failed.',
+        error: 'Internal Server Error',
+        details: isDevelopment ? exception.message : undefined,
+      };
     }
 
     if (exception instanceof Error) {
@@ -100,8 +103,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     };
   }
 
-  private mapDatabaseError(
-    error: DatabaseErrorShape,
+  private mapPrismaError(
+    error: Prisma.PrismaClientKnownRequestError,
     isDevelopment: boolean,
   ): {
     status: number;
@@ -110,8 +113,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     details?: unknown;
   } {
     switch (error.code) {
-      case 'ER_DUP_ENTRY':
-        if (this.isDuplicateEmailError(error.sqlMessage)) {
+      case 'P2002': {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta?.target.join(',')
+          : String(error.meta?.target ?? '');
+
+        if (target.toLowerCase().includes('email')) {
           return {
             status: HttpStatus.CONFLICT,
             message: 'Email already exists. Please use another email or login.',
@@ -124,19 +131,20 @@ export class HttpExceptionFilter implements ExceptionFilter {
           message: 'A record with the same unique value already exists.',
           error: 'Conflict',
         };
-      case 'ER_NO_REFERENCED_ROW_2':
+      }
+      case 'P2003':
         return {
           status: HttpStatus.BAD_REQUEST,
           message: 'Related record was not found for this operation.',
           error: 'Bad Request',
         };
-      case 'ER_BAD_NULL_ERROR':
+      case 'P2011':
         return {
           status: HttpStatus.BAD_REQUEST,
           message: 'A required field is missing.',
           error: 'Bad Request',
         };
-      case 'ER_ACCESS_DENIED_ERROR':
+      case 'P1000':
         return {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'Database authentication failed. Check database credentials.',
@@ -147,22 +155,9 @@ export class HttpExceptionFilter implements ExceptionFilter {
           status: HttpStatus.INTERNAL_SERVER_ERROR,
           message: 'Database operation failed.',
           error: 'Internal Server Error',
-          details: isDevelopment ? error.sqlMessage : undefined,
+          details: isDevelopment ? error.message : undefined,
         };
     }
-  }
-
-  private isDuplicateEmailError(sqlMessage: string | undefined): boolean {
-    if (!sqlMessage) {
-      return false;
-    }
-
-    const normalized = sqlMessage.toLowerCase();
-    return (
-      normalized.includes('users.email') ||
-      normalized.includes("for key 'users.email'") ||
-      normalized.includes('user.email')
-    );
   }
 
   private getHttpStatusLabel(status: number): string {

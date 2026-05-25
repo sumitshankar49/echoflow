@@ -5,8 +5,8 @@ export declare class Circle {
     name: string;
     description: string | null;
     ownerId: string;
-    owner: User;
-    members: CircleMember[];
+    owner?: User;
+    members?: CircleMember[];
     createdAt: Date;
     updatedAt: Date;
 }

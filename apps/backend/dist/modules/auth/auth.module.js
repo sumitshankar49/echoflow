@@ -11,13 +11,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
-const typeorm_1 = require("@nestjs/typeorm");
-const user_entity_1 = require("../../database/entities/user.entity");
-const circle_entity_1 = require("../circles/entities/circle.entity");
-const circle_member_entity_1 = require("../circles/entities/circle-member.entity");
 const mail_module_1 = require("../mail/mail.module");
-const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
-const revoked_token_entity_1 = require("./entities/revoked-token.entity");
 const auth_controller_1 = require("./auth.controller");
 const auth_service_1 = require("./auth.service");
 const jwt_refresh_strategy_1 = require("./strategies/jwt-refresh.strategy");
@@ -28,7 +22,6 @@ exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User, revoked_token_entity_1.RevokedToken, password_reset_token_entity_1.PasswordResetToken, circle_entity_1.Circle, circle_member_entity_1.CircleMember]),
             mail_module_1.MailModule,
             passport_1.PassportModule.register({ defaultStrategy: 'jwt' }),
             jwt_1.JwtModule.registerAsync({

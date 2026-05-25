@@ -1,13 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Repository } from 'typeorm';
-import { User } from '../../database/entities/user.entity';
-import { Circle } from '../circles/entities/circle.entity';
-import { CircleMember } from '../circles/entities/circle-member.entity';
+import type { User } from '../../generated/prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
-import { RevokedToken } from './entities/revoked-token.entity';
-import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -33,15 +29,12 @@ export interface ResetPasswordResponse {
     message: string;
 }
 export declare class AuthService {
-    private readonly usersRepository;
-    private readonly revokedTokensRepository;
-    private readonly passwordResetTokensRepository;
-    private readonly circlesRepository;
-    private readonly circleMembersRepository;
+    private readonly prisma;
     private readonly jwtService;
     private readonly configService;
     private readonly mailService;
-    constructor(usersRepository: Repository<User>, revokedTokensRepository: Repository<RevokedToken>, passwordResetTokensRepository: Repository<PasswordResetToken>, circlesRepository: Repository<Circle>, circleMembersRepository: Repository<CircleMember>, jwtService: JwtService, configService: ConfigService, mailService: MailService);
+    constructor(prisma: PrismaService, jwtService: JwtService, configService: ConfigService, mailService: MailService);
+    private readonly safeUserSelect;
     register(registerDto: RegisterDto): Promise<Omit<User, 'password'>>;
     login(loginDto: LoginDto): Promise<TokenResponse>;
     refreshTokens(refreshTokenDto: RefreshTokenDto): Promise<TokenResponse>;

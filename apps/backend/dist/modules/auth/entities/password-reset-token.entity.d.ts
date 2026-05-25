@@ -6,5 +6,5 @@ export declare class PasswordResetToken {
     expiresAt: Date;
     usedAt: Date | null;
     createdAt: Date;
-    user: User;
+    user?: User;
 }

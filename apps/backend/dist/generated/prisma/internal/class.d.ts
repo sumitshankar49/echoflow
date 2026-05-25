@@ -30,5 +30,35 @@ export interface PrismaClient<in LogOpts extends Prisma.LogLevel = never, in out
     $extends: runtime.Types.Extensions.ExtendsHook<"extends", Prisma.TypeMapCb<OmitOpts>, ExtArgs, runtime.Types.Utils.Call<Prisma.TypeMapCb<OmitOpts>, {
         extArgs: ExtArgs;
     }>>;
+    get user(): Prisma.UserDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get passwordResetToken(): Prisma.PasswordResetTokenDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get note(): Prisma.NoteDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get circle(): Prisma.CircleDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get circleMember(): Prisma.CircleMemberDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get circleSharedNote(): Prisma.CircleSharedNoteDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get playlist(): Prisma.PlaylistDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get reminder(): Prisma.ReminderDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get revokedToken(): Prisma.RevokedTokenDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
+    get mood(): Prisma.MoodDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
 }
 export declare function getPrismaClientClass(): PrismaClientConstructor;

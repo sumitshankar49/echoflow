@@ -41,61 +41,65 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("@nestjs/typeorm");
 const bcrypt = __importStar(require("bcryptjs"));
-const typeorm_2 = require("typeorm");
-const user_entity_1 = require("../../database/entities/user.entity");
+const prisma_service_1 = require("../../prisma/prisma.service");
 let UsersService = class UsersService {
-    constructor(usersRepository) {
-        this.usersRepository = usersRepository;
+    constructor(prisma) {
+        this.prisma = prisma;
+        this.safeUserSelect = {
+            id: true,
+            name: true,
+            email: true,
+            gender: true,
+            dob: true,
+            mobileNumber: true,
+            relationshipStatus: true,
+            createdAt: true,
+            updatedAt: true,
+        };
     }
     async getMe(userId) {
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: userId },
+            select: this.safeUserSelect,
         });
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        const { password, ...safeUser } = user;
-        return safeUser;
+        return user;
     }
     async updateProfile(userId, updateProfileDto) {
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: userId },
         });
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        if (updateProfileDto.name !== undefined) {
-            user.name = updateProfileDto.name;
-        }
-        if (updateProfileDto.gender !== undefined) {
-            user.gender = updateProfileDto.gender;
-        }
-        if (updateProfileDto.dob !== undefined) {
-            user.dob = new Date(updateProfileDto.dob);
-        }
-        if (updateProfileDto.mobileNumber !== undefined) {
-            user.mobileNumber = updateProfileDto.mobileNumber;
-        }
-        if (updateProfileDto.relationshipStatus !== undefined) {
-            user.relationshipStatus = updateProfileDto.relationshipStatus;
-        }
-        const savedUser = await this.usersRepository.save(user);
-        const { password, ...safeUser } = savedUser;
-        return safeUser;
+        const savedUser = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                ...(updateProfileDto.name !== undefined ? { name: updateProfileDto.name } : {}),
+                ...(updateProfileDto.gender !== undefined ? { gender: updateProfileDto.gender } : {}),
+                ...(updateProfileDto.dob !== undefined ? { dob: new Date(updateProfileDto.dob) } : {}),
+                ...(updateProfileDto.mobileNumber !== undefined
+                    ? { mobileNumber: updateProfileDto.mobileNumber }
+                    : {}),
+                ...(updateProfileDto.relationshipStatus !== undefined
+                    ? { relationshipStatus: updateProfileDto.relationshipStatus }
+                    : {}),
+            },
+            select: this.safeUserSelect,
+        });
+        return savedUser;
     }
     async changePassword(userId, changePasswordDto) {
         if (changePasswordDto.newPassword !== changePasswordDto.confirmPassword) {
             throw new common_1.BadRequestException('New password and confirm password do not match');
         }
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 id: true,
@@ -105,15 +109,16 @@ let UsersService = class UsersService {
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        user.password = await bcrypt.hash(changePasswordDto.newPassword, 12);
-        await this.usersRepository.save(user);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { password: await bcrypt.hash(changePasswordDto.newPassword, 12) },
+        });
         return { message: 'Password updated successfully' };
     }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

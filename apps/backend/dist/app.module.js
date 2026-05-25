@@ -16,7 +16,6 @@ const jwt_1 = require("@nestjs/jwt");
 const core_1 = require("@nestjs/core");
 const schedule_1 = require("@nestjs/schedule");
 const throttler_1 = require("@nestjs/throttler");
-const typeorm_1 = require("@nestjs/typeorm");
 const app_controller_1 = require("./app.controller");
 const configuration_1 = __importDefault(require("./config/configuration"));
 const auth_module_1 = require("./modules/auth/auth.module");
@@ -26,6 +25,7 @@ const music_module_1 = require("./modules/music/music.module");
 const notes_module_1 = require("./modules/notes/notes.module");
 const reminders_module_1 = require("./modules/reminders/reminders.module");
 const users_module_1 = require("./modules/users/users.module");
+const prisma_module_1 = require("./prisma/prisma.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -56,16 +56,7 @@ exports.AppModule = AppModule = __decorate([
                     },
                 }),
             }),
-            typeorm_1.TypeOrmModule.forRootAsync({
-                inject: [config_1.ConfigService],
-                useFactory: (configService) => ({
-                    type: 'mysql',
-                    url: configService.getOrThrow('database.url'),
-                    synchronize: configService.get('database.synchronize', false),
-                    logging: configService.get('database.logging', false),
-                    autoLoadEntities: true,
-                }),
-            }),
+            prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
             circles_module_1.CirclesModule,
             mood_module_1.MoodModule,

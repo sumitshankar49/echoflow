@@ -1,5 +1,5 @@
 allowBuilds:
-  '@nestjs/core': set this to true or false
-  '@prisma/engines': set this to true or false
-  '@scarf/scarf': set this to true or false
-  prisma: set this to true or false
+  '@nestjs/core': true
+  '@prisma/engines': true
+  '@scarf/scarf': true
+  prisma: true

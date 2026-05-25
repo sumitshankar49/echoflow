@@ -3,11 +3,10 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { Repository } from 'typeorm';
+import type { User } from '../../generated/prisma/client';
 
-import { User } from '../../database/entities/user.entity';
+import { PrismaService } from '../../prisma/prisma.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -17,26 +16,35 @@ export interface PasswordChangeResponse {
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  private readonly safeUserSelect = {
+    id: true,
+    name: true,
+    email: true,
+    gender: true,
+    dob: true,
+    mobileNumber: true,
+    relationshipStatus: true,
+    createdAt: true,
+    updatedAt: true,
+  } as const;
 
   async getMe(userId: string): Promise<Omit<User, 'password'>> {
-    const user = await this.usersRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: this.safeUserSelect,
     });
 
     if (!user) {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    const { password, ...safeUser } = user;
-    return safeUser;
+    return user;
   }
 
   async updateProfile(userId: string, updateProfileDto: UpdateProfileDto): Promise<Omit<User, 'password'>> {
-    const user = await this.usersRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
@@ -44,25 +52,23 @@ export class UsersService {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    if (updateProfileDto.name !== undefined) {
-      user.name = updateProfileDto.name;
-    }
-    if (updateProfileDto.gender !== undefined) {
-      user.gender = updateProfileDto.gender;
-    }
-    if (updateProfileDto.dob !== undefined) {
-      user.dob = new Date(updateProfileDto.dob);
-    }
-    if (updateProfileDto.mobileNumber !== undefined) {
-      user.mobileNumber = updateProfileDto.mobileNumber;
-    }
-    if (updateProfileDto.relationshipStatus !== undefined) {
-      user.relationshipStatus = updateProfileDto.relationshipStatus;
-    }
+    const savedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(updateProfileDto.name !== undefined ? { name: updateProfileDto.name } : {}),
+        ...(updateProfileDto.gender !== undefined ? { gender: updateProfileDto.gender } : {}),
+        ...(updateProfileDto.dob !== undefined ? { dob: new Date(updateProfileDto.dob) } : {}),
+        ...(updateProfileDto.mobileNumber !== undefined
+          ? { mobileNumber: updateProfileDto.mobileNumber }
+          : {}),
+        ...(updateProfileDto.relationshipStatus !== undefined
+          ? { relationshipStatus: updateProfileDto.relationshipStatus }
+          : {}),
+      },
+      select: this.safeUserSelect,
+    });
 
-    const savedUser = await this.usersRepository.save(user);
-    const { password, ...safeUser } = savedUser;
-    return safeUser;
+    return savedUser;
   }
 
   async changePassword(
@@ -73,7 +79,7 @@ export class UsersService {
       throw new BadRequestException('New password and confirm password do not match');
     }
 
-    const user = await this.usersRepository.findOne({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -85,8 +91,10 @@ export class UsersService {
       throw new UnauthorizedException('User no longer exists');
     }
 
-    user.password = await bcrypt.hash(changePasswordDto.newPassword, 12);
-    await this.usersRepository.save(user);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: await bcrypt.hash(changePasswordDto.newPassword, 12) },
+    });
 
     return { message: 'Password updated successfully' };
   }

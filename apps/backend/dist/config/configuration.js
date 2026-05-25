@@ -11,7 +11,17 @@ const toBoolean = (value, fallback = false) => {
     }
     return ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
 };
-console.log("Configuration loading... NODE_ENV:", process.env.NODE_ENV, "DATABASE_URL:", process.env.DATABASE_URL);
+const getDatabaseUrl = () => {
+    if (process.env.DATABASE_URL) {
+        return process.env.DATABASE_URL;
+    }
+    const host = process.env.DB_HOST ?? '127.0.0.1';
+    const port = process.env.DB_PORT ?? '3306';
+    const user = process.env.DB_USER ?? 'root';
+    const password = process.env.DB_PASSWORD ?? '';
+    const name = process.env.DB_NAME ?? 'echoflow';
+    return `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
+};
 exports.default = () => ({
     app: {
         nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -20,8 +30,14 @@ exports.default = () => ({
         apiPrefix: process.env.API_PREFIX ?? 'api',
     },
     database: {
-        host: '127.0.0.1',
-        url: 'mysql://root:Sumit@123@localhost:3306/echoflow',
+        host: process.env.DB_HOST ?? '127.0.0.1',
+        port: toNumber(process.env.DB_PORT, 3306),
+        username: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        name: process.env.DB_NAME,
+        url: getDatabaseUrl(),
+        synchronize: toBoolean(process.env.DB_SYNCHRONIZE, false),
+        logging: toBoolean(process.env.DB_LOGGING, false),
     },
     jwt: {
         accessSecret: process.env.JWT_ACCESS_SECRET,

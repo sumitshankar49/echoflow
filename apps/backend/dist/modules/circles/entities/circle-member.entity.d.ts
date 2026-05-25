@@ -4,10 +4,10 @@ export declare class CircleMember {
     id: string;
     circleId: string;
     userId: string;
-    role: 'owner' | 'member';
-    status: 'invited' | 'accepted';
-    circle: Circle;
-    user: User;
+    role: string;
+    status: string;
+    circle?: Circle;
+    user?: User;
     createdAt: Date;
     updatedAt: Date;
 }

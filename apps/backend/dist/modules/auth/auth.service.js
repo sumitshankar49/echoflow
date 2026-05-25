@@ -41,80 +41,86 @@ var __importStar = (this && this.__importStar) || (function () {
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const crypto_1 = require("crypto");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
-const typeorm_1 = require("@nestjs/typeorm");
 const bcrypt = __importStar(require("bcryptjs"));
 const schedule_1 = require("@nestjs/schedule");
-const typeorm_2 = require("typeorm");
-const user_entity_1 = require("../../database/entities/user.entity");
-const circle_entity_1 = require("../circles/entities/circle.entity");
-const circle_member_entity_1 = require("../circles/entities/circle-member.entity");
+const prisma_service_1 = require("../../prisma/prisma.service");
 const mail_service_1 = require("../mail/mail.service");
-const revoked_token_entity_1 = require("./entities/revoked-token.entity");
-const password_reset_token_entity_1 = require("./entities/password-reset-token.entity");
 let AuthService = class AuthService {
-    constructor(usersRepository, revokedTokensRepository, passwordResetTokensRepository, circlesRepository, circleMembersRepository, jwtService, configService, mailService) {
-        this.usersRepository = usersRepository;
-        this.revokedTokensRepository = revokedTokensRepository;
-        this.passwordResetTokensRepository = passwordResetTokensRepository;
-        this.circlesRepository = circlesRepository;
-        this.circleMembersRepository = circleMembersRepository;
+    constructor(prisma, jwtService, configService, mailService) {
+        this.prisma = prisma;
         this.jwtService = jwtService;
         this.configService = configService;
         this.mailService = mailService;
+        this.safeUserSelect = {
+            id: true,
+            name: true,
+            email: true,
+            gender: true,
+            dob: true,
+            mobileNumber: true,
+            relationshipStatus: true,
+            createdAt: true,
+            updatedAt: true,
+        };
     }
     async register(registerDto) {
         if (registerDto.password !== registerDto.confirmPassword) {
             throw new common_1.BadRequestException('Password and confirm password do not match');
         }
-        const existingUser = await this.usersRepository.findOne({
-            where: { email: registerDto.email.toLowerCase() },
+        const normalizedEmail = registerDto.email.toLowerCase();
+        const existingUser = await this.prisma.user.findUnique({
+            where: { email: normalizedEmail },
         });
         if (existingUser) {
             throw new common_1.BadRequestException('Email is already registered');
         }
         const hashedPassword = await bcrypt.hash(registerDto.password, 12);
-        const user = this.usersRepository.create({
-            name: registerDto.name,
-            email: registerDto.email.toLowerCase(),
-            password: hashedPassword,
-        });
-        const savedUser = await this.usersRepository.save(user);
-        if (registerDto.inviteCircleId) {
-            const invitedCircle = await this.circlesRepository.findOne({
-                where: { id: registerDto.inviteCircleId },
+        const savedUser = await this.prisma.$transaction(async (tx) => {
+            const createdUser = await tx.user.create({
+                data: {
+                    name: registerDto.name,
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                },
             });
-            if (invitedCircle) {
-                const existingMembership = await this.circleMembersRepository.findOne({
-                    where: {
-                        circleId: invitedCircle.id,
-                        userId: savedUser.id,
-                    },
+            if (registerDto.inviteCircleId) {
+                const invitedCircle = await tx.circle.findUnique({
+                    where: { id: registerDto.inviteCircleId },
                 });
-                if (!existingMembership) {
-                    const membership = this.circleMembersRepository.create({
-                        circleId: invitedCircle.id,
-                        userId: savedUser.id,
-                        role: 'member',
-                        status: 'accepted',
+                if (invitedCircle) {
+                    const existingMembership = await tx.circleMember.findUnique({
+                        where: {
+                            circleId_userId: {
+                                circleId: invitedCircle.id,
+                                userId: createdUser.id,
+                            },
+                        },
                     });
-                    await this.circleMembersRepository.save(membership);
+                    if (!existingMembership) {
+                        await tx.circleMember.create({
+                            data: {
+                                circleId: invitedCircle.id,
+                                userId: createdUser.id,
+                                role: 'member',
+                                status: 'accepted',
+                            },
+                        });
+                    }
                 }
             }
-        }
+            return createdUser;
+        });
         const { password, ...safeUser } = savedUser;
         return safeUser;
     }
     async login(loginDto) {
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { email: loginDto.email.toLowerCase() },
             select: {
                 id: true,
@@ -148,13 +154,13 @@ let AuthService = class AuthService {
         if (payload.tokenType !== 'refresh') {
             throw new common_1.UnauthorizedException('Invalid token type');
         }
-        const isRevoked = await this.revokedTokensRepository.findOne({
+        const isRevoked = await this.prisma.revokedToken.findUnique({
             where: { token: refreshTokenDto.refreshToken },
         });
         if (isRevoked) {
             throw new common_1.UnauthorizedException('Token has been revoked');
         }
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: payload.sub },
             select: {
                 id: true,
@@ -174,7 +180,7 @@ let AuthService = class AuthService {
             message: 'If an account with that email exists, a reset link has been sent.',
         };
         const normalizedEmail = forgotPasswordDto.email.toLowerCase();
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { email: normalizedEmail },
             select: {
                 id: true,
@@ -187,20 +193,23 @@ let AuthService = class AuthService {
         if (!user) {
             return genericResponse;
         }
-        await this.passwordResetTokensRepository.delete({
-            userId: user.id,
-            usedAt: (0, typeorm_2.IsNull)(),
+        await this.prisma.passwordResetToken.deleteMany({
+            where: {
+                userId: user.id,
+                usedAt: null,
+            },
         });
         const rawToken = (0, crypto_1.randomBytes)(32).toString('hex');
         const tokenHash = this.hashToken(rawToken);
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
-        const passwordResetToken = this.passwordResetTokensRepository.create({
-            userId: user.id,
-            tokenHash,
-            expiresAt,
-            usedAt: null,
+        await this.prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                tokenHash,
+                expiresAt,
+                usedAt: null,
+            },
         });
-        await this.passwordResetTokensRepository.save(passwordResetToken);
         const resetPasswordUrl = this.configService.getOrThrow('mail.resetPasswordUrl');
         const resetUrl = `${resetPasswordUrl}?token=${encodeURIComponent(rawToken)}`;
         await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
@@ -211,17 +220,17 @@ let AuthService = class AuthService {
             throw new common_1.BadRequestException('New password and confirm password do not match');
         }
         const tokenHash = this.hashToken(resetPasswordDto.token);
-        const resetToken = await this.passwordResetTokensRepository.findOne({
+        const resetToken = await this.prisma.passwordResetToken.findFirst({
             where: {
                 tokenHash,
-                usedAt: (0, typeorm_2.IsNull)(),
-                expiresAt: (0, typeorm_2.MoreThan)(new Date()),
+                usedAt: null,
+                expiresAt: { gt: new Date() },
             },
         });
         if (!resetToken) {
             throw new common_1.BadRequestException('Invalid or expired reset token');
         }
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: resetToken.userId },
             select: {
                 id: true,
@@ -231,25 +240,32 @@ let AuthService = class AuthService {
         if (!user) {
             throw new common_1.BadRequestException('Invalid or expired reset token');
         }
-        user.password = await bcrypt.hash(resetPasswordDto.newPassword, 12);
-        await this.usersRepository.save(user);
-        resetToken.usedAt = new Date();
-        await this.passwordResetTokensRepository.save(resetToken);
+        await this.prisma.$transaction([
+            this.prisma.user.update({
+                where: { id: user.id },
+                data: { password: await bcrypt.hash(resetPasswordDto.newPassword, 12) },
+            }),
+            this.prisma.passwordResetToken.update({
+                where: { id: resetToken.id },
+                data: { usedAt: new Date() },
+            }),
+        ]);
         return { message: 'Password reset successfully' };
     }
     async logout(refreshTokenDto) {
         const refreshSecret = this.configService.getOrThrow('jwt.refreshSecret');
         try {
             const payload = await this.jwtService.verifyAsync(refreshTokenDto.refreshToken, { secret: refreshSecret });
-            const existing = await this.revokedTokensRepository.findOne({
+            const existing = await this.prisma.revokedToken.findUnique({
                 where: { token: refreshTokenDto.refreshToken },
             });
             if (!existing) {
-                const revokedToken = this.revokedTokensRepository.create({
-                    token: refreshTokenDto.refreshToken,
-                    expiresAt: new Date(payload.exp * 1000),
+                await this.prisma.revokedToken.create({
+                    data: {
+                        token: refreshTokenDto.refreshToken,
+                        expiresAt: new Date(payload.exp * 1000),
+                    },
                 });
-                await this.revokedTokensRepository.save(revokedToken);
             }
         }
         catch {
@@ -257,24 +273,28 @@ let AuthService = class AuthService {
         return { message: 'Logged out successfully' };
     }
     async cleanupExpiredRevokedTokens() {
-        await this.revokedTokensRepository.delete({
-            expiresAt: (0, typeorm_2.LessThan)(new Date()),
+        await this.prisma.revokedToken.deleteMany({
+            where: {
+                expiresAt: { lt: new Date() },
+            },
         });
     }
     async cleanupExpiredPasswordResetTokens() {
-        await this.passwordResetTokensRepository.delete({
-            expiresAt: (0, typeorm_2.LessThan)(new Date()),
+        await this.prisma.passwordResetToken.deleteMany({
+            where: {
+                expiresAt: { lt: new Date() },
+            },
         });
     }
     async getMe(userId) {
-        const user = await this.usersRepository.findOne({
+        const user = await this.prisma.user.findUnique({
             where: { id: userId },
+            select: this.safeUserSelect,
         });
         if (!user) {
             throw new common_1.UnauthorizedException('User no longer exists');
         }
-        const { password, ...safeUser } = user;
-        return safeUser;
+        return user;
     }
     async generateTokens(user) {
         const accessSecret = this.configService.getOrThrow('jwt.accessSecret');
@@ -317,16 +337,7 @@ __decorate([
 ], AuthService.prototype, "cleanupExpiredPasswordResetTokens", null);
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __param(1, (0, typeorm_1.InjectRepository)(revoked_token_entity_1.RevokedToken)),
-    __param(2, (0, typeorm_1.InjectRepository)(password_reset_token_entity_1.PasswordResetToken)),
-    __param(3, (0, typeorm_1.InjectRepository)(circle_entity_1.Circle)),
-    __param(4, (0, typeorm_1.InjectRepository)(circle_member_entity_1.CircleMember)),
-    __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
         config_1.ConfigService,
         mail_service_1.MailService])

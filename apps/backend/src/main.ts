@@ -9,6 +9,7 @@ import { AppModule } from './app.module';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  app.enableShutdownHooks();
 
   const corsOrigin = configService.get<string>('app.corsOrigin', '*');
   app.enableCors({

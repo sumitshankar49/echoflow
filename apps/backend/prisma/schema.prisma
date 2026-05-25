@@ -1,5 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client-js"
+  output       = "../src/generated/prisma"
+  moduleFormat = "commonjs"
 }
 
 datasource db {
@@ -7,33 +9,29 @@ datasource db {
 }
 
 model User {
-  id            String             @id @default(uuid()) @db.VarChar(36)
-  name          String             @db.VarChar(100)
-  email         String             @unique(map: "IDX_97672ac88f789774dd47f7c8be") @db.VarChar(150)
-  password      String             @db.VarChar(255)
-  gender        String?            @db.VarChar(20)
-  dob           DateTime?          @db.Date
-  mobileNumber  String?            @db.VarChar(20)
-  relationshipStatus String?       @db.VarChar(30)
-  createdAt     DateTime           @default(now()) @db.Timestamp(6)
-  updatedAt     DateTime           @default(now()) @updatedAt @db.Timestamp(6)
-  circleMembers CircleMember[]
-  sharedNotes   CircleSharedNote[] @relation("CircleSharedBy")
-  ownedCircles  Circle[]           @relation("CircleOwner")
-  notes         Note[]
-  passwordResetTokens PasswordResetToken[]
+  id                 String             @id @default(uuid()) @db.VarChar(36)
+  name               String             @db.VarChar(100)
+  email              String             @unique(map: "IDX_97672ac88f789774dd47f7c8be") @db.VarChar(150)
+  password           String             @db.VarChar(255)
+  gender             String?            @db.VarChar(20)
+  dob                DateTime?          @db.Date
+  mobileNumber       String?            @db.VarChar(20)
+  relationshipStatus String?            @db.VarChar(30)
+  createdAt          DateTime           @default(now()) @db.Timestamp(6)
+  updatedAt          DateTime           @default(now()) @updatedAt @db.Timestamp(6)
+  sharedNotes        CircleSharedNote[] @relation("CircleSharedBy")
+  notes              Note[]
 
   @@map("users")
 }
 
 model PasswordResetToken {
-  id        String   @id @default(uuid()) @db.VarChar(36)
-  userId    String   @db.VarChar(36)
-  tokenHash String   @unique(map: "idx_password_reset_tokens_token_hash") @db.VarChar(64)
-  expiresAt DateTime @db.Timestamp(0)
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  userId    String    @db.VarChar(36)
+  tokenHash String    @unique(map: "idx_password_reset_tokens_token_hash") @db.VarChar(64)
+  expiresAt DateTime  @db.Timestamp(0)
   usedAt    DateTime? @db.Timestamp(0)
-  createdAt DateTime @default(now()) @db.Timestamp(0)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_password_reset_tokens_user")
+  createdAt DateTime  @default(now()) @db.Timestamp(6)
 
   @@index([userId], map: "idx_password_reset_tokens_user_id")
   @@map("password_reset_tokens")
@@ -46,7 +44,7 @@ model Note {
   voiceUrl     String?            @db.VarChar(500)
   tags         String?            @db.Text
   isFavorite   Int                @default(0) @db.TinyInt
-  userId       String             @db.VarChar(255)
+  userId       String             @db.VarChar(36)
   createdAt    DateTime           @default(now()) @db.Timestamp(6)
   updatedAt    DateTime           @default(now()) @updatedAt @db.Timestamp(6)
   circleShared CircleSharedNote[]
@@ -63,11 +61,8 @@ model Circle {
   ownerId     String             @db.Char(36)
   createdAt   DateTime           @default(now()) @db.Timestamp(0)
   updatedAt   DateTime           @default(now()) @updatedAt @db.Timestamp(0)
-  members     CircleMember[]
   sharedNotes CircleSharedNote[]
-  owner       User               @relation("CircleOwner", fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circles_owner")
 
-  @@index([ownerId], map: "fk_circles_owner")
   @@map("circles")
 }
 
@@ -79,11 +74,8 @@ model CircleMember {
   status    String   @default("invited") @db.VarChar(20)
   createdAt DateTime @default(now()) @db.Timestamp(0)
   updatedAt DateTime @default(now()) @updatedAt @db.Timestamp(0)
-  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_members_circle")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_circle_members_user")
 
   @@unique([circleId, userId], map: "uq_circle_member_user")
-  @@index([userId], map: "fk_circle_members_user")
   @@map("circle_members")
 }
 
@@ -101,4 +93,51 @@ model CircleSharedNote {
   @@index([noteId], map: "fk_circle_shared_notes_note")
   @@index([sharedByUserId], map: "fk_circle_shared_notes_user")
   @@map("circle_shared_notes")
+}
+
+model Playlist {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  name        String   @db.VarChar(150)
+  description String?  @db.VarChar(500)
+  tracks      String?  @db.Text
+  userId      String   @db.VarChar(255)
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([userId], map: "idx_playlists_user_id")
+  @@map("playlists")
+}
+
+model Reminder {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  title       String   @db.VarChar(150)
+  description String?  @db.VarChar(500)
+  remindAt    DateTime @db.Timestamp(0)
+  isCompleted Int      @default(0) @db.TinyInt
+  userId      String   @db.VarChar(255)
+  createdAt   DateTime @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([userId], map: "idx_reminders_user_id")
+  @@map("reminders")
+}
+
+model RevokedToken {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  token     String   @unique(map: "idx_revoked_tokens_token") @db.VarChar(512)
+  expiresAt DateTime @db.Timestamp(0)
+
+  @@map("revoked_tokens")
+}
+
+model Mood {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  mood       String   @db.VarChar(50)
+  userId     String   @db.VarChar(36)
+  recordedAt DateTime @default(now()) @db.Timestamp(0)
+  createdAt  DateTime @default(now()) @db.Timestamp(6)
+  updatedAt  DateTime @default(now()) @updatedAt @db.Timestamp(6)
+
+  @@index([userId], map: "idx_moods_user_id")
+  @@map("moods")
 }

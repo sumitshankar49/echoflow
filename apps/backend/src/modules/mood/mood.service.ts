@@ -1,21 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 import { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
+import { PrismaService } from '../../prisma/prisma.service';
 import {
   CurrentMoodDto,
   MoodPointDto,
   TodayMoodResponseDto,
 } from './dto/today-mood-response.dto';
-import { Mood } from './entities/mood.entity';
 
 @Injectable()
 export class MoodService {
-  constructor(
-    @InjectRepository(Mood)
-    private readonly moodRepository: Repository<Mood>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async getTodayMood(currentUser: AuthenticatedUser): Promise<TodayMoodResponseDto> {
     const now = new Date();
@@ -27,20 +22,26 @@ export class MoodService {
     trendStart.setUTCDate(trendStart.getUTCDate() - 6);
 
     const [todayMoodRecord, trendRecords] = await Promise.all([
-      this.moodRepository
-        .createQueryBuilder('mood')
-        .where('mood.userId = :userId', { userId: currentUser.userId })
-        .andWhere('mood.recordedAt >= :todayStart', { todayStart })
-        .andWhere('mood.recordedAt < :todayEnd', { todayEnd })
-        .orderBy('mood.recordedAt', 'DESC')
-        .getOne(),
-      this.moodRepository
-        .createQueryBuilder('mood')
-        .where('mood.userId = :userId', { userId: currentUser.userId })
-        .andWhere('mood.recordedAt >= :trendStart', { trendStart })
-        .andWhere('mood.recordedAt < :todayEnd', { todayEnd })
-        .orderBy('mood.recordedAt', 'DESC')
-        .getMany(),
+      this.prisma.mood.findFirst({
+        where: {
+          userId: currentUser.userId,
+          recordedAt: {
+            gte: todayStart,
+            lt: todayEnd,
+          },
+        },
+        orderBy: { recordedAt: 'desc' },
+      }),
+      this.prisma.mood.findMany({
+        where: {
+          userId: currentUser.userId,
+          recordedAt: {
+            gte: trendStart,
+            lt: todayEnd,
+          },
+        },
+        orderBy: { recordedAt: 'desc' },
+      }),
     ]);
 
     const latestMoodByDate = new Map<string, string>();

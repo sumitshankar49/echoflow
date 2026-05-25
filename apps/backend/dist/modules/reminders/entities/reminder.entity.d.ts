@@ -6,7 +6,7 @@ export declare class Reminder {
     remindAt: Date;
     isCompleted: boolean;
     userId: string;
-    user: User;
+    user?: User;
     createdAt: Date;
     updatedAt: Date;
 }

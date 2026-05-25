@@ -3,14 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import type { StringValue } from 'ms';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
-
-import { User } from '../../database/entities/user.entity';
-import { Circle } from '../circles/entities/circle.entity';
-import { CircleMember } from '../circles/entities/circle-member.entity';
 import { MailModule } from '../mail/mail.module';
-import { PasswordResetToken } from './entities/password-reset-token.entity';
-import { RevokedToken } from './entities/revoked-token.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
@@ -18,7 +11,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, RevokedToken, PasswordResetToken, Circle, CircleMember]),
     MailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

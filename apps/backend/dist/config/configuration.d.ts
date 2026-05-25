@@ -8,7 +8,13 @@ declare const _default: () => {
     };
     database: {
         host: string;
+        port: number;
+        username: string | undefined;
+        password: string | undefined;
+        name: string | undefined;
         url: string;
+        synchronize: boolean;
+        logging: boolean;
     };
     jwt: {
         accessSecret: string | undefined;

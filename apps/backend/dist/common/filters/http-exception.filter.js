@@ -8,7 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HttpExceptionFilter = void 0;
 const common_1 = require("@nestjs/common");
-const typeorm_1 = require("typeorm");
+const client_1 = require("../../generated/prisma/client");
 let HttpExceptionFilter = class HttpExceptionFilter {
     catch(exception, host) {
         const ctx = host.switchToHttp();
@@ -45,9 +45,16 @@ let HttpExceptionFilter = class HttpExceptionFilter {
                 error: responseObject.error ?? this.getHttpStatusLabel(status),
             };
         }
-        if (exception instanceof typeorm_1.QueryFailedError) {
-            const databaseError = exception;
-            return this.mapDatabaseError(databaseError, isDevelopment);
+        if (exception instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            return this.mapPrismaError(exception, isDevelopment);
+        }
+        if (exception instanceof client_1.Prisma.PrismaClientUnknownRequestError) {
+            return {
+                status: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
+                message: 'Database operation failed.',
+                error: 'Internal Server Error',
+                details: isDevelopment ? exception.message : undefined,
+            };
         }
         if (exception instanceof Error) {
             return {
@@ -62,10 +69,13 @@ let HttpExceptionFilter = class HttpExceptionFilter {
             error: 'Internal Server Error',
         };
     }
-    mapDatabaseError(error, isDevelopment) {
+    mapPrismaError(error, isDevelopment) {
         switch (error.code) {
-            case 'ER_DUP_ENTRY':
-                if (this.isDuplicateEmailError(error.sqlMessage)) {
+            case 'P2002': {
+                const target = Array.isArray(error.meta?.target)
+                    ? error.meta?.target.join(',')
+                    : String(error.meta?.target ?? '');
+                if (target.toLowerCase().includes('email')) {
                     return {
                         status: common_1.HttpStatus.CONFLICT,
                         message: 'Email already exists. Please use another email or login.',
@@ -77,19 +87,20 @@ let HttpExceptionFilter = class HttpExceptionFilter {
                     message: 'A record with the same unique value already exists.',
                     error: 'Conflict',
                 };
-            case 'ER_NO_REFERENCED_ROW_2':
+            }
+            case 'P2003':
                 return {
                     status: common_1.HttpStatus.BAD_REQUEST,
                     message: 'Related record was not found for this operation.',
                     error: 'Bad Request',
                 };
-            case 'ER_BAD_NULL_ERROR':
+            case 'P2011':
                 return {
                     status: common_1.HttpStatus.BAD_REQUEST,
                     message: 'A required field is missing.',
                     error: 'Bad Request',
                 };
-            case 'ER_ACCESS_DENIED_ERROR':
+            case 'P1000':
                 return {
                     status: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
                     message: 'Database authentication failed. Check database credentials.',
@@ -100,18 +111,9 @@ let HttpExceptionFilter = class HttpExceptionFilter {
                     status: common_1.HttpStatus.INTERNAL_SERVER_ERROR,
                     message: 'Database operation failed.',
                     error: 'Internal Server Error',
-                    details: isDevelopment ? error.sqlMessage : undefined,
+                    details: isDevelopment ? error.message : undefined,
                 };
         }
-    }
-    isDuplicateEmailError(sqlMessage) {
-        if (!sqlMessage) {
-            return false;
-        }
-        const normalized = sqlMessage.toLowerCase();
-        return (normalized.includes('users.email') ||
-            normalized.includes("for key 'users.email'") ||
-            normalized.includes('user.email'));
     }
     getHttpStatusLabel(status) {
         return ({

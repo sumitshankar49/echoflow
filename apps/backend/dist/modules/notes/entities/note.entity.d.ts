@@ -7,7 +7,7 @@ export declare class Note {
     tags: string[] | null;
     isFavorite: boolean;
     userId: string;
-    user: User;
+    user?: User;
     createdAt: Date;
     updatedAt: Date;
 }
