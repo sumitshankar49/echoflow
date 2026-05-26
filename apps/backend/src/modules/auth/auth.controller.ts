@@ -125,14 +125,14 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Send password reset email' })
+  @ApiOperation({ summary: 'Send password reset OTP to email' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Password reset request handled',
     schema: {
       example: {
-        message: 'If an account with that email exists, a reset link has been sent.',
+        message: 'If an account with that email exists, a password reset OTP has been sent.',
       },
     },
   })
@@ -142,7 +142,7 @@ export class AuthController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reset password using email token' })
+  @ApiOperation({ summary: 'Reset password using email + OTP' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -154,7 +154,7 @@ export class AuthController {
     },
   })
   @ApiBadRequestResponse({
-    description: 'Invalid reset token, expired token, or password confirmation mismatch',
+    description: 'Invalid OTP, expired OTP, or password confirmation mismatch',
   })
   resetPassword(@Body() resetPasswordDto: ResetPasswordDto): Promise<ResetPasswordResponse> {
     return this.authService.resetPassword(resetPasswordDto);

@@ -19,10 +19,10 @@ import {
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ token?: string }>;
+  searchParams: Promise<{ email?: string }>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const token = resolvedSearchParams.token;
+  const email = resolvedSearchParams.email;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
@@ -43,7 +43,7 @@ export default async function ResetPasswordPage({
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <ResetPasswordForm token={token} />
+            <ResetPasswordForm email={email} />
 
             <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
               {AUTH_LINK_TEXT.BACK_TO}{' '}

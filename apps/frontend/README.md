@@ -46,3 +46,33 @@ lsof -ti:3000 | xargs kill -9
 cd apps/frontend
 (fuser -k 3000/tcp || true) && pnpm run dev -- --port 3000
 ```
+
+## Testing
+
+Run unit and component tests:
+
+```bash
+cd apps/frontend
+pnpm run test
+```
+
+Run coverage report:
+
+```bash
+cd apps/frontend
+pnpm run test:cov
+```
+
+Run end-to-end tests:
+
+```bash
+cd apps/frontend
+pnpm run test:e2e
+```
+
+Run complete test suite:
+
+```bash
+cd apps/frontend
+pnpm run test:all
+```

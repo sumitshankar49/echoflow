@@ -149,14 +149,14 @@ __decorate([
 __decorate([
     (0, common_1.Post)('forgot-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Send password reset email' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Send password reset OTP to email' }),
     (0, swagger_1.ApiBody)({ type: forgot_password_dto_1.ForgotPasswordDto }),
     (0, swagger_1.ApiResponse)({
         status: common_1.HttpStatus.OK,
         description: 'Password reset request handled',
         schema: {
             example: {
-                message: 'If an account with that email exists, a reset link has been sent.',
+                message: 'If an account with that email exists, a password reset OTP has been sent.',
             },
         },
     }),
@@ -168,7 +168,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('reset-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Reset password using email token' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Reset password using email + OTP' }),
     (0, swagger_1.ApiBody)({ type: reset_password_dto_1.ResetPasswordDto }),
     (0, swagger_1.ApiResponse)({
         status: common_1.HttpStatus.OK,
@@ -180,7 +180,7 @@ __decorate([
         },
     }),
     (0, swagger_1.ApiBadRequestResponse)({
-        description: 'Invalid reset token, expired token, or password confirmation mismatch',
+        description: 'Invalid OTP, expired OTP, or password confirmation mismatch',
     }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),

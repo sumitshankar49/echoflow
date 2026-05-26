@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,100}$/;
 const STRONG_PASSWORD_MESSAGE =
@@ -7,12 +7,20 @@ const STRONG_PASSWORD_MESSAGE =
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'Password reset token from email link',
-    example: '6fd0e4cb770c31cb491e45b4eb728d2250f06d98d4c988f3a940cb43fa15a4fa',
+    description: 'Registered email address',
+    example: 'candy@example.com',
+  })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty({
+    description: '6-digit OTP received by email',
+    example: '482915',
   })
   @IsString()
   @IsNotEmpty()
-  token!: string;
+  @Matches(/^\d{6}$/, { message: 'OTP must be exactly 6 digits' })
+  otp!: string;
 
   @ApiProperty({
     description: 'New account password',

@@ -3,6 +3,7 @@ export const AUTH_FIELD_LABELS = {
   USERNAME: 'Username',
   EMAIL: 'Email',
   PASSWORD: 'Password',
+  OTP: 'OTP',
   NEW_PASSWORD: 'New password',
   CONFIRM_PASSWORD: 'Confirm password',
 } as const;
@@ -12,6 +13,7 @@ export const AUTH_FIELD_PLACEHOLDERS = {
   USERNAME: 'Enter Username...',
   EMAIL: 'you@example.com',
   PASSWORD: 'Enter your password',
+  OTP: 'Enter 6-digit OTP',
   NEW_PASSWORD: 'At least 8 characters',
   CONFIRM_PASSWORD: 'Re-enter your password',
 } as const;

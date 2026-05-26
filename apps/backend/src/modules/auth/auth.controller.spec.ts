@@ -52,7 +52,8 @@ describe('AuthController', () => {
   };
 
   const resetPasswordDto: ResetPasswordDto = {
-    token: 'reset-token',
+    email: 'candy@example.com',
+    otp: '482915',
     newPassword: 'NewStrongPass123!',
     confirmPassword: 'NewStrongPass123!',
   };
@@ -129,7 +130,7 @@ describe('AuthController', () => {
 
   it('forwards forgotPassword to the auth service', async () => {
     const response = {
-      message: 'If an account with that email exists, a reset link has been sent.',
+      message: 'If an account with that email exists, a password reset OTP has been sent.',
     };
     authServiceMock.forgotPassword.mockResolvedValue(response);
 

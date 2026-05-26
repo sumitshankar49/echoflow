@@ -19,13 +19,22 @@ class ResetPasswordDto {
 exports.ResetPasswordDto = ResetPasswordDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Password reset token from email link',
-        example: '6fd0e4cb770c31cb491e45b4eb728d2250f06d98d4c988f3a940cb43fa15a4fa',
+        description: 'Registered email address',
+        example: 'candy@example.com',
+    }),
+    (0, class_validator_1.IsEmail)(),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "email", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: '6-digit OTP received by email',
+        example: '482915',
     }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.Matches)(/^\d{6}$/, { message: 'OTP must be exactly 6 digits' }),
     __metadata("design:type", String)
-], ResetPasswordDto.prototype, "token", void 0);
+], ResetPasswordDto.prototype, "otp", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
         description: 'New account password',

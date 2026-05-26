@@ -3,7 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomBytes, createHash } from 'crypto';
+import { createHash, randomInt } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -199,7 +199,7 @@ export class AuthService {
 
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<ForgotPasswordResponse> {
     const genericResponse = {
-      message: 'If an account with that email exists, a reset link has been sent.',
+      message: 'If an account with that email exists, a password reset OTP has been sent.',
     };
 
     const normalizedEmail = forgotPasswordDto.email.toLowerCase();
@@ -225,8 +225,8 @@ export class AuthService {
       },
     });
 
-    const rawToken = randomBytes(32).toString('hex');
-    const tokenHash = this.hashToken(rawToken);
+    const otp = randomInt(100000, 1000000).toString();
+    const tokenHash = this.hashOtp(user.id, otp);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.passwordResetToken.create({
@@ -238,10 +238,7 @@ export class AuthService {
       },
     });
 
-    const resetPasswordUrl = this.configService.getOrThrow<string>('mail.resetPasswordUrl');
-    const resetUrl = `${resetPasswordUrl}?token=${encodeURIComponent(rawToken)}`;
-
-    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetUrl);
+    await this.mailService.sendPasswordResetOtpEmail(user.email, user.name, otp);
 
     return genericResponse;
   }
@@ -251,29 +248,28 @@ export class AuthService {
       throw new BadRequestException('New password and confirm password do not match');
     }
 
-    const tokenHash = this.hashToken(resetPasswordDto.token);
+    const user = await this.prisma.user.findUnique({
+      where: { email: resetPasswordDto.email.toLowerCase() },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!user) {
+      throw new BadRequestException('Invalid or expired OTP');
+    }
+
     const resetToken = await this.prisma.passwordResetToken.findFirst({
       where: {
-        tokenHash,
+        userId: user.id,
+        tokenHash: this.hashOtp(user.id, resetPasswordDto.otp),
         usedAt: null,
         expiresAt: { gt: new Date() },
       },
     });
 
     if (!resetToken) {
-      throw new BadRequestException('Invalid or expired reset token');
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: resetToken.userId },
-      select: {
-        id: true,
-        password: true,
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BadRequestException('Invalid or expired OTP');
     }
 
     await this.prisma.$transaction([
@@ -383,5 +379,9 @@ export class AuthService {
 
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private hashOtp(userId: string, otp: string): string {
+    return this.hashToken(`${userId}:${otp}`);
   }
 }

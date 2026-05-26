@@ -17,11 +17,7 @@ function formatDate(value: Date) {
 }
 
 function getClockPreference(): ClockPreference {
-  if (typeof window === 'undefined') {
-    return '12h';
-  }
-
-  const saved = window.localStorage.getItem('profile_clock_pref');
+  const saved = globalThis.localStorage?.getItem('profile_clock_pref') ?? null;
   return saved === '24h' ? '24h' : '12h';
 }
 

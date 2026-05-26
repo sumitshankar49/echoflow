@@ -49,7 +49,7 @@ export function ForgotPasswordForm() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center text-xs text-zinc-500 dark:text-zinc-400"
         >
-          Sending a secure reset link to your inbox.
+          Sending a secure OTP to your inbox.
         </motion.p>
       ) : null}
     </motion.form>

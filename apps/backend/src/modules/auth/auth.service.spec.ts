@@ -52,6 +52,7 @@ describe('AuthService', () => {
 
   const mailServiceMock = {
     sendPasswordResetEmail: jest.fn(),
+    sendPasswordResetOtpEmail: jest.fn(),
     sendCircleInviteEmail: jest.fn(),
   };
 
@@ -374,11 +375,11 @@ describe('AuthService', () => {
       await expect(
         service.forgotPassword({ email: 'missing@example.com' }),
       ).resolves.toEqual({
-        message: 'If an account with that email exists, a reset link has been sent.',
+        message: 'If an account with that email exists, a password reset OTP has been sent.',
       });
 
       expect(prismaMock.passwordResetToken.deleteMany).not.toHaveBeenCalled();
-      expect(mailServiceMock.sendPasswordResetEmail).not.toHaveBeenCalled();
+      expect(mailServiceMock.sendPasswordResetOtpEmail).not.toHaveBeenCalled();
     });
 
     it('creates a reset token and sends an email for an existing user', async () => {
@@ -389,7 +390,7 @@ describe('AuthService', () => {
       await expect(
         service.forgotPassword({ email: 'Candy@Example.com' }),
       ).resolves.toEqual({
-        message: 'If an account with that email exists, a reset link has been sent.',
+        message: 'If an account with that email exists, a password reset OTP has been sent.',
       });
 
       expect(prismaMock.passwordResetToken.deleteMany).toHaveBeenCalledWith({
@@ -406,10 +407,10 @@ describe('AuthService', () => {
           usedAt: null,
         }),
       });
-      expect(mailServiceMock.sendPasswordResetEmail).toHaveBeenCalledWith(
+      expect(mailServiceMock.sendPasswordResetOtpEmail).toHaveBeenCalledWith(
         'candy@example.com',
         'Candy User',
-        expect.stringMatching(/^http:\/\/localhost:3000\/reset-password\?token=/),
+        expect.stringMatching(/^\d{6}$/),
       );
     });
   });
@@ -418,33 +419,37 @@ describe('AuthService', () => {
     it('throws when new password confirmation does not match', async () => {
       await expect(
         service.resetPassword({
-          token: 'reset-token',
+          email: 'candy@example.com',
+          otp: '482915',
           newPassword: 'NewStrongPass123!',
           confirmPassword: 'Mismatch123!',
         }),
       ).rejects.toThrow(new BadRequestException('New password and confirm password do not match'));
     });
 
-    it('throws when the reset token is invalid or expired', async () => {
+    it('throws when OTP is invalid or expired', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+      });
       prismaMock.passwordResetToken.findFirst.mockResolvedValue(null);
 
       await expect(
         service.resetPassword({
-          token: 'reset-token',
+          email: 'candy@example.com',
+          otp: '482915',
           newPassword: 'NewStrongPass123!',
           confirmPassword: 'NewStrongPass123!',
         }),
-      ).rejects.toThrow(new BadRequestException('Invalid or expired reset token'));
+      ).rejects.toThrow(new BadRequestException('Invalid or expired OTP'));
     });
 
     it('updates the password and marks the reset token as used', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-id',
+      });
       prismaMock.passwordResetToken.findFirst.mockResolvedValue({
         id: 'reset-token-id',
         userId: 'user-id',
-      });
-      prismaMock.user.findUnique.mockResolvedValue({
-        id: 'user-id',
-        password: 'old-hash',
       });
       prismaMock.user.update.mockResolvedValue({ id: 'user-id' });
       prismaMock.passwordResetToken.update.mockResolvedValue({ id: 'reset-token-id' });
@@ -455,7 +460,8 @@ describe('AuthService', () => {
 
       await expect(
         service.resetPassword({
-          token: 'reset-token',
+          email: 'candy@example.com',
+          otp: '482915',
           newPassword: 'NewStrongPass123!',
           confirmPassword: 'NewStrongPass123!',
         }),
@@ -469,6 +475,19 @@ describe('AuthService', () => {
         where: { id: 'reset-token-id' },
         data: { usedAt: expect.any(Date) },
       });
+    });
+
+    it('throws when email does not map to a user', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword({
+          email: 'missing@example.com',
+          otp: '482915',
+          newPassword: 'NewStrongPass123!',
+          confirmPassword: 'NewStrongPass123!',
+        }),
+      ).rejects.toThrow(new BadRequestException('Invalid or expired OTP'));
     });
   });
 

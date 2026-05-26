@@ -46,4 +46,5 @@ export declare class AuthService {
     getMe(userId: string): Promise<Omit<User, 'password'>>;
     private generateTokens;
     private hashToken;
+    private hashOtp;
 }

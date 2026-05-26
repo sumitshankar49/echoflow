@@ -10,6 +10,7 @@ import { AppController } from './app.controller';
 import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { MoodModule } from './modules/mood/mood.module';
 import { MusicModule } from './modules/music/music.module';
 import { NotesModule } from './modules/notes/notes.module';
@@ -46,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module';
     PrismaModule,
     AuthModule,
     CirclesModule,
+    DashboardModule,
     MoodModule,
     MusicModule,
     NotesModule,

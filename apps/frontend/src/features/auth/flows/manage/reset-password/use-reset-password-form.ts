@@ -17,13 +17,14 @@ import {
   AUTH_TOAST_MESSAGES,
 } from '@/shared/constants';
 
-export function useResetPasswordForm(token?: string | null) {
+export function useResetPasswordForm(email?: string | null) {
   const router = useRouter();
 
   const form = useForm<ResetPasswordSchema>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      token: token ?? '',
+      email: email ?? '',
+      otp: '',
       newPassword: '',
       confirmPassword: '',
     },
@@ -39,7 +40,7 @@ export function useResetPasswordForm(token?: string | null) {
         ? error.response?.data?.message?.toLowerCase()
         : undefined;
 
-      if (apiMessage?.includes('token') || apiMessage?.includes('expired') || apiMessage?.includes('invalid')) {
+      if (apiMessage?.includes('otp') || apiMessage?.includes('expired') || apiMessage?.includes('invalid')) {
         toast.error(AUTH_ERROR_MESSAGES.RESET_PASSWORD_INVALID_LINK);
         return;
       }

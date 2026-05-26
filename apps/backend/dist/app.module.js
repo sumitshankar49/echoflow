@@ -20,6 +20,7 @@ const app_controller_1 = require("./app.controller");
 const configuration_1 = __importDefault(require("./config/configuration"));
 const auth_module_1 = require("./modules/auth/auth.module");
 const circles_module_1 = require("./modules/circles/circles.module");
+const dashboard_module_1 = require("./modules/dashboard/dashboard.module");
 const mood_module_1 = require("./modules/mood/mood.module");
 const music_module_1 = require("./modules/music/music.module");
 const notes_module_1 = require("./modules/notes/notes.module");
@@ -59,6 +60,7 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,
             circles_module_1.CirclesModule,
+            dashboard_module_1.DashboardModule,
             mood_module_1.MoodModule,
             music_module_1.MusicModule,
             notes_module_1.NotesModule,

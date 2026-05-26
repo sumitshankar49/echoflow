@@ -41,6 +41,24 @@ let MailService = MailService_1 = class MailService {
       `,
         });
     }
+    async sendPasswordResetOtpEmail(email, name, otp) {
+        if (!this.resend || !this.fromEmail) {
+            this.logger.warn(`Skipping password reset OTP email for ${email} because mail provider is not configured`);
+            return;
+        }
+        await this.resend.emails.send({
+            from: this.fromEmail,
+            to: email,
+            subject: 'Your EchoFlow password reset OTP',
+            html: `
+        <p>Hello ${name},</p>
+        <p>Use the OTP below to reset your EchoFlow password:</p>
+        <p><strong style="font-size: 22px; letter-spacing: 3px;">${otp}</strong></p>
+        <p>This OTP will expire in 15 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      `,
+        });
+    }
     async sendCircleInviteEmail(email, circleName, inviteUrl, inviterName) {
         if (!this.resend || !this.fromEmail) {
             this.logger.warn(`Skipping circle invite email for ${email} because mail provider is not configured`);
