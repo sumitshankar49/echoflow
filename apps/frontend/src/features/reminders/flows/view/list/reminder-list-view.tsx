@@ -20,6 +20,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { ShimmerCard } from '@/components/common/ShimmerCard';
+import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -472,6 +473,7 @@ export function ReminderListView() {
   const [toDate, setToDate] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingReminder, setEditingReminder] = useState<Reminder | null>(null);
+  const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
@@ -573,7 +575,17 @@ export function ReminderListView() {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (reminder: Reminder) => {
+    setReminderToDelete(reminder);
+  };
+
+  const confirmDelete = async () => {
+    if (!reminderToDelete) {
+      return;
+    }
+
+    const id = reminderToDelete.id;
+    setReminderToDelete(null);
     setDeletingIds((s) => new Set([...s, id]));
     window.setTimeout(async () => {
       try {
@@ -665,7 +677,7 @@ export function ReminderListView() {
                   reminder={reminder}
                   onToggle={() => handleToggle(reminder)}
                   onEdit={() => openEdit(reminder)}
-                  onDelete={() => handleDelete(reminder.id)}
+                  onDelete={() => handleDelete(reminder)}
                   isToggling={togglingIds.has(reminder.id)}
                   isDeleting={deletingIds.has(reminder.id)}
                 />
@@ -730,6 +742,24 @@ export function ReminderListView() {
           />
         )}
       </AnimatePresence>
+
+      <ConfirmActionDialog
+        open={Boolean(reminderToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReminderToDelete(null);
+          }
+        }}
+        title="Delete reminder"
+        description={
+          reminderToDelete
+            ? `Are you sure you want to delete \"${reminderToDelete.title}\"? This action cannot be undone.`
+            : 'Are you sure you want to delete this reminder?'
+        }
+        confirmLabel="Delete reminder"
+        isLoading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </>
   );
 }

@@ -18,6 +18,7 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { ShimmerCard } from '@/components/common/ShimmerCard';
+import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CreatePlaylistForm } from '../../manage/create/create-playlist-form';
@@ -51,6 +52,8 @@ export function PlaylistListView() {
   const [activeMoodFilter, setActiveMoodFilter] = useState<'all' | PlaylistMood>('all');
   const [showAllPlaylists, setShowAllPlaylists] = useState(false);
   const [activeDeletingPlaylistId, setActiveDeletingPlaylistId] = useState<string | null>(null);
+  const [playlistToDelete, setPlaylistToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [playlistArtworkMap, setPlaylistArtworkMap] = useState<Record<string, string>>({});
   const playlistItems = Array.isArray(playlists) ? playlists : [];
   const favoritePlaylists = playlistItems.filter((playlist) => favoritePlaylistIds.includes(playlist.id));
@@ -241,14 +244,7 @@ export function PlaylistListView() {
     });
   };
 
-  const handleRemovePlaylist = async (playlistId: string, playlistName: string) => {
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(`Remove playlist "${playlistName}"? This cannot be undone.`);
-      if (!confirmed) {
-        return;
-      }
-    }
-
+  const handleRemovePlaylist = async (playlistId: string) => {
     try {
       setActiveDeletingPlaylistId(playlistId);
       await removePlaylist(playlistId);
@@ -265,16 +261,6 @@ export function PlaylistListView() {
       return;
     }
 
-    if (typeof window !== 'undefined') {
-      const confirmed = window.confirm(
-        `Remove all ${playlistItems.length} playlists? This will clear your current playlist data and cannot be undone.`,
-      );
-
-      if (!confirmed) {
-        return;
-      }
-    }
-
     const ids = playlistItems.map((playlist) => playlist.id);
     setActiveDeletingPlaylistId('__bulk__');
 
@@ -287,6 +273,7 @@ export function PlaylistListView() {
       toast.error('Unable to remove all playlists');
     } finally {
       setActiveDeletingPlaylistId(null);
+      setIsBulkDeleteDialogOpen(false);
     }
   };
 
@@ -559,7 +546,7 @@ export function PlaylistListView() {
                 size="sm"
                 className="rounded-full border-rose-500/30 text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
                 onClick={() => {
-                  void handleRemoveAllPlaylists();
+                  setIsBulkDeleteDialogOpen(true);
                 }}
                 disabled={isRemovingPlaylist || activeDeletingPlaylistId === '__bulk__'}
               >
@@ -712,7 +699,7 @@ export function PlaylistListView() {
                           className="h-9 w-9 rounded-full text-rose-600 hover:bg-rose-500/10 hover:text-rose-600"
                           title="Remove playlist"
                           onClick={() => {
-                            void handleRemovePlaylist(playlist.id, playlist.name);
+                            setPlaylistToDelete({ id: playlist.id, name: playlist.name });
                           }}
                           disabled={isRemovingPlaylist}
                         >
@@ -769,6 +756,42 @@ export function PlaylistListView() {
           onPlaybackError={player.onPlaybackError}
         />
       ) : null}
+
+      <ConfirmActionDialog
+        open={Boolean(playlistToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPlaylistToDelete(null);
+          }
+        }}
+        title="Delete playlist"
+        description={
+          playlistToDelete
+            ? `Are you sure you want to delete \"${playlistToDelete.name}\"? This action cannot be undone.`
+            : 'Are you sure you want to delete this playlist?'
+        }
+        confirmLabel="Delete playlist"
+        isLoading={isRemovingPlaylist && activeDeletingPlaylistId !== '__bulk__'}
+        onConfirm={async () => {
+          if (!playlistToDelete) {
+            return;
+          }
+
+          const target = playlistToDelete;
+          setPlaylistToDelete(null);
+          await handleRemovePlaylist(target.id);
+        }}
+      />
+
+      <ConfirmActionDialog
+        open={isBulkDeleteDialogOpen}
+        onOpenChange={setIsBulkDeleteDialogOpen}
+        title="Delete all playlists"
+        description={`Are you sure you want to delete all ${playlistItems.length} playlists? This action cannot be undone.`}
+        confirmLabel="Delete all"
+        isLoading={activeDeletingPlaylistId === '__bulk__'}
+        onConfirm={handleRemoveAllPlaylists}
+      />
     </div>
   );
 }

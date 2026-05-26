@@ -6,10 +6,12 @@
   "scripts": {
     "start:dev": "nest start --watch",
     "start": "nest start",
-    "build": "nest build",
+    "build": "nest build && tsc -p tsconfig.spec.json --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage"
   },
   "keywords": [],
   "author": "",
@@ -17,11 +19,33 @@
   "type": "commonjs",
   "devDependencies": {
     "@nestjs/cli": "^11.0.8",
+    "@nestjs/testing": "^11.1.22",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/ms": "^2.1.0",
     "@types/node": "^25.9.1",
     "@types/passport-jwt": "^4.0.1",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
     "typescript": "^6.0.3"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.22",

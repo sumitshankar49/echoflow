@@ -47,6 +47,11 @@ export interface CreateCirclePayload {
   description?: string;
 }
 
+export interface UpdateCirclePayload {
+  name?: string;
+  description?: string;
+}
+
 export interface InviteMemberPayload {
   email: string;
 }

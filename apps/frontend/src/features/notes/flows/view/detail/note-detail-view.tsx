@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { NoteEditor } from '@/features/notes/flows/manage/editor/note-editor';
 import { notesQueryKeys } from '@/features/notes/shared/data/notes.query-keys';
 import { notesService } from '@/features/notes/shared/data/notes.service';
@@ -29,6 +30,7 @@ export function NoteDetailView({ id }: { id: string }) {
   const { data: note, isPending, isError } = useNoteDetail(id);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const updateMutation = useMutation({
     mutationFn: (payload: Parameters<typeof notesService.update>[1]) => notesService.update(id, payload),
@@ -82,6 +84,10 @@ export function NoteDetailView({ id }: { id: string }) {
     });
   };
 
+  const confirmDelete = async () => {
+    await deleteMutation.mutateAsync();
+  };
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
@@ -109,7 +115,7 @@ export function NoteDetailView({ id }: { id: string }) {
             type="button"
             variant="destructive"
             size="icon"
-            onClick={() => deleteMutation.mutate()}
+            onClick={() => setIsDeleteDialogOpen(true)}
             disabled={deleteMutation.isPending}
           >
             {deleteMutation.isPending ? (
@@ -158,6 +164,16 @@ export function NoteDetailView({ id }: { id: string }) {
           />
         </>
       )}
+
+      <ConfirmActionDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Delete note"
+        description={`Are you sure you want to delete \"${note.title}\"? This action cannot be undone.`}
+        confirmLabel="Delete note"
+        isLoading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </motion.article>
   );
 }

@@ -4,6 +4,7 @@ import type {
   CircleApiResponse,
   CircleMember,
   CreateCirclePayload,
+  UpdateCirclePayload,
   InviteMemberResponse,
   InviteMemberPayload,
   PaginatedResponse,
@@ -55,6 +56,9 @@ export const circlesService = {
     apiClient.get<CircleApiResponse>(`/circles/${id}`).then((r) => normalizeCircle(r.data)),
   create: (payload: CreateCirclePayload) =>
     apiClient.post<CircleApiResponse>('/circles', payload).then((r) => normalizeCircle(r.data)),
+  update: (id: string, payload: UpdateCirclePayload) =>
+    apiClient.patch<CircleApiResponse>(`/circles/${id}`, payload).then((r) => normalizeCircle(r.data)),
+  remove: (id: string) => apiClient.delete(`/circles/${id}`).then((r) => r.data),
   invite: (id: string, payload: InviteMemberPayload) =>
     apiClient.post<InviteMemberResponse>(`/circles/${id}/invite`, payload).then((r) => r.data),
   acceptInvitation: (id: string) => apiClient.patch(`/circles/${id}/invitations/accept`).then((r) => r.data),

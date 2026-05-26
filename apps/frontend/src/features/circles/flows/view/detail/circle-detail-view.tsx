@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { AxiosError } from 'axios';
@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,11 @@ export function CircleDetailView({ id }: { id: string }) {
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [editableName, setEditableName] = useState('');
+  const [editableDescription, setEditableDescription] = useState('');
+  const [isDeleteCircleDialogOpen, setIsDeleteCircleDialogOpen] = useState(false);
 
   function getInviteErrorMessage(error: unknown) {
     const maybeAxiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
@@ -144,6 +150,67 @@ export function CircleDetailView({ id }: { id: string }) {
     },
     onError: () => toast.error('Unable to remove member'),
   });
+
+  const updateCircleMutation = useMutation({
+    mutationFn: (payload: { name: string; description?: string }) => circlesService.update(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.detail(id) });
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.list() });
+      toast.success('Circle details updated');
+    },
+    onError: () => toast.error('Unable to update circle details'),
+  });
+
+  const deleteCircleMutation = useMutation({
+    mutationFn: () => circlesService.remove(id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.list() });
+      toast.success('Circle deleted');
+      window.location.replace('/circles');
+    },
+    onError: () => toast.error('Unable to delete circle'),
+  });
+
+  const confirmLeaveCircle = async () => {
+    await leaveMutation.mutateAsync();
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!memberToRemove) {
+      return;
+    }
+
+    const target = memberToRemove;
+    setMemberToRemove(null);
+    await removeMutation.mutateAsync(target.id);
+  };
+
+  useEffect(() => {
+    if (!circle) {
+      return;
+    }
+
+    setEditableName(circle.name);
+    setEditableDescription(circle.description || '');
+  }, [circle]);
+
+  const handleSaveCircleDetails = async () => {
+    const trimmedName = editableName.trim();
+
+    if (!trimmedName) {
+      toast.info('Circle name is required');
+      return;
+    }
+
+    await updateCircleMutation.mutateAsync({
+      name: trimmedName,
+      description: editableDescription.trim() || undefined,
+    });
+  };
+
+  const confirmDeleteCircle = async () => {
+    await deleteCircleMutation.mutateAsync();
+  };
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (isError) return <p className="text-sm text-red-500">Circle not found.</p>;
@@ -371,13 +438,59 @@ export function CircleDetailView({ id }: { id: string }) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => leaveMutation.mutate()}
+                onClick={() => setIsLeaveDialogOpen(true)}
                 disabled={leaveMutation.isPending}
                 className="mt-4 w-full rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
               >
                 <UserMinus className="h-4 w-4" />
                 Leave circle
               </Button>
+            ) : null}
+
+            {isOwner ? (
+              <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/5 p-4 space-y-3">
+                <p className="text-sm font-medium text-white/85">Manage circle</p>
+
+                <div className="space-y-1.5">
+                  <Label className="text-white/80">Circle name</Label>
+                  <Input
+                    value={editableName}
+                    onChange={(event) => setEditableName(event.target.value)}
+                    className="h-10 rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
+                    placeholder="Circle name"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-white/80">Description</Label>
+                  <Input
+                    value={editableDescription}
+                    onChange={(event) => setEditableDescription(event.target.value)}
+                    className="h-10 rounded-xl border-white/10 bg-white/5 text-white placeholder:text-white/35"
+                    placeholder="Add a short description"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => void handleSaveCircleDetails()}
+                    disabled={updateCircleMutation.isPending}
+                    className="rounded-full bg-white text-slate-950 hover:bg-emerald-50"
+                  >
+                    Save changes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDeleteCircleDialogOpen(true)}
+                    disabled={deleteCircleMutation.isPending}
+                    className="rounded-full border-rose-300/40 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20"
+                  >
+                    Delete circle
+                  </Button>
+                </div>
+              </div>
             ) : null}
           </div>
         </aside>
@@ -427,7 +540,12 @@ export function CircleDetailView({ id }: { id: string }) {
                         size="icon-sm"
                         variant="ghost"
                         className="rounded-full"
-                        onClick={() => removeMutation.mutate(member.id)}
+                        onClick={() =>
+                          setMemberToRemove({
+                            id: member.id,
+                            name,
+                          })
+                        }
                         disabled={removeMutation.isPending}
                       >
                         <UserMinus className="h-4 w-4" />
@@ -507,6 +625,44 @@ export function CircleDetailView({ id }: { id: string }) {
           ))}
         </div>
       </section>
+
+      <ConfirmActionDialog
+        open={isLeaveDialogOpen}
+        onOpenChange={setIsLeaveDialogOpen}
+        title="Leave circle"
+        description={`Are you sure you want to leave \"${circle.name}\"? You will lose access to this circle until invited again.`}
+        confirmLabel="Leave circle"
+        isLoading={leaveMutation.isPending}
+        onConfirm={confirmLeaveCircle}
+      />
+
+      <ConfirmActionDialog
+        open={Boolean(memberToRemove)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMemberToRemove(null);
+          }
+        }}
+        title="Remove member"
+        description={
+          memberToRemove
+            ? `Are you sure you want to remove \"${memberToRemove.name}\" from this circle?`
+            : 'Are you sure you want to remove this member from this circle?'
+        }
+        confirmLabel="Remove member"
+        isLoading={removeMutation.isPending}
+        onConfirm={confirmRemoveMember}
+      />
+
+      <ConfirmActionDialog
+        open={isDeleteCircleDialogOpen}
+        onOpenChange={setIsDeleteCircleDialogOpen}
+        title="Delete circle"
+        description={`Are you sure you want to delete \"${circle.name}\"? This action cannot be undone and all memberships in this circle will be removed.`}
+        confirmLabel="Delete circle"
+        isLoading={deleteCircleMutation.isPending}
+        onConfirm={confirmDeleteCircle}
+      />
     </div>
   );
 }

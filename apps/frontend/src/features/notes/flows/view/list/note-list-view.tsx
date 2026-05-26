@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Grid2X2,
   List,
+  Pencil,
   Search,
   Sparkles,
   Star,
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { ContentReveal } from '@/components/common/ContentReveal';
+import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,8 @@ export function NoteListView() {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<{ id: string; title: string } | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const debouncedQuery = useDebouncedValue(query, 350);
@@ -73,6 +77,15 @@ export function NoteListView() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: notesQueryKeys.all });
       toast.success('Note created');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { title: string; content: string; tags: string[] } }) =>
+      notesService.update(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: notesQueryKeys.all });
+      toast.success('Note updated');
     },
   });
 
@@ -174,7 +187,13 @@ export function NoteListView() {
 
   const resetEditorState = () => {
     setIsEditorOpen(false);
+    setEditingNoteId(null);
   };
+
+  const editingNote = useMemo(
+    () => (editingNoteId ? hydratedNotes.find((note) => note.id === editingNoteId) ?? null : null),
+    [editingNoteId, hydratedNotes],
+  );
 
   const handleFavoriteToggle = async (noteId: string, currentFavorite: boolean) => {
     await toggleFavoriteMutation.mutateAsync({
@@ -183,8 +202,18 @@ export function NoteListView() {
     });
   };
 
-  const handleDelete = (noteId: string) => {
+  const handleDelete = (noteId: string, noteTitle: string) => {
+    setNoteToDelete({ id: noteId, title: noteTitle });
+  };
+
+  const confirmDelete = async () => {
+    if (!noteToDelete) {
+      return;
+    }
+
+    const noteId = noteToDelete.id;
     setDeletingIds((prev) => [...prev, noteId]);
+    setNoteToDelete(null);
 
     window.setTimeout(async () => {
       try {
@@ -203,6 +232,23 @@ export function NoteListView() {
       content: payload.content,
       tags: payload.tags,
       isFavorite: false,
+    });
+
+    resetEditorState();
+  };
+
+  const handleUpdate = async (payload: { title: string; content: string; tags: string[] }) => {
+    if (!editingNoteId) {
+      return;
+    }
+
+    await updateMutation.mutateAsync({
+      id: editingNoteId,
+      payload: {
+        title: payload.title,
+        content: payload.content,
+        tags: payload.tags,
+      },
     });
 
     resetEditorState();
@@ -318,15 +364,22 @@ export function NoteListView() {
               className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border bg-background p-6 shadow-xl"
             >
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Create Note</h2>
+                <h2 className="text-xl font-semibold">{editingNote ? 'Edit Note' : 'Create Note'}</h2>
                 <Badge variant="secondary">Rich text editor</Badge>
               </div>
 
               <NoteEditor
-                submitLabel={createMutation.isPending ? 'Saving...' : 'Create note'}
-                isPending={createMutation.isPending}
+                initialTitle={editingNote?.title ?? ''}
+                initialContent={editingNote?.content ?? ''}
+                initialTags={editingNote?.tags ?? []}
+                submitLabel={
+                  editingNote
+                    ? (updateMutation.isPending ? 'Saving...' : 'Save changes')
+                    : (createMutation.isPending ? 'Saving...' : 'Create note')
+                }
+                isPending={editingNote ? updateMutation.isPending : createMutation.isPending}
                 onCancel={resetEditorState}
-                onSubmit={handleCreate}
+                onSubmit={editingNote ? handleUpdate : handleCreate}
               />
             </motion.div>
           </motion.div>
@@ -373,6 +426,18 @@ export function NoteListView() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
+                    onClick={() => {
+                      setEditingNoteId(note.id);
+                      setIsEditorOpen(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
                     onClick={() => handleFavoriteToggle(note.id, Boolean(note.favorite))}
                   >
                     <Star className={`h-4 w-4 ${note.favorite ? 'fill-yellow-400 text-yellow-500' : ''}`} />
@@ -382,7 +447,7 @@ export function NoteListView() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8 text-red-500 hover:text-red-600"
-                    onClick={() => handleDelete(note.id)}
+                    onClick={() => handleDelete(note.id, note.title)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -449,6 +514,24 @@ export function NoteListView() {
       ) : (
         <div ref={sentinelRef} className="h-1" />
       )}
+
+      <ConfirmActionDialog
+        open={Boolean(noteToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setNoteToDelete(null);
+          }
+        }}
+        title="Delete note"
+        description={
+          noteToDelete
+            ? `Are you sure you want to delete \"${noteToDelete.title}\"? This action cannot be undone.`
+            : 'Are you sure you want to delete this note?'
+        }
+        confirmLabel="Delete note"
+        isLoading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
     </ContentReveal>
   );

@@ -44,6 +44,8 @@ import { remindersService } from "@/features/reminders/shared/data/reminders.ser
 import { circlesService } from "@/features/circles/shared/data/circles.service";
 import { musicService } from "@/features/music/shared/data/music.service";
 import { formatTime } from "@/features/music/shared/domain/music.utils";
+import { moodQueryKeys } from "@/features/mood/shared/data/mood.query-keys";
+import { moodService } from "@/features/mood/shared/data/mood.service";
 import { usersService } from "@/features/users/shared/data/users.service";
 import { usersQueryKeys } from "@/features/users/shared/data/users.query-keys";
 
@@ -225,9 +227,39 @@ export function DashboardOverview() {
     queryKey: ["dashboard", "music-playlists"],
     queryFn: musicService.list,
   });
+  const { data: moodToday } = useQuery({
+    queryKey: moodQueryKeys.today(),
+    queryFn: moodService.today,
+  });
 
   const [isMoodJournalOpen, setIsMoodJournalOpen] = useState(false);
   const [selectedMood, setSelectedMood] = useState<MoodKind>("calm");
+    const mapBackendMoodToKind = (mood: string | null | undefined): MoodKind => {
+      const normalized = String(mood || "").toLowerCase();
+
+      if (["happy", "joyful", "excited", "grateful"].includes(normalized)) {
+        return "joyful";
+      }
+
+      if (["focused", "productive", "motivated"].includes(normalized)) {
+        return "focused";
+      }
+
+      if (["reflective", "sad", "anxious", "tired"].includes(normalized)) {
+        return "reflective";
+      }
+
+      return "calm";
+    };
+
+    const syncedMood = mapBackendMoodToKind(moodToday?.currentMood?.mood);
+
+    useEffect(() => {
+      if (moodToday?.currentMood?.mood) {
+        setSelectedMood(mapBackendMoodToKind(moodToday.currentMood.mood));
+      }
+    }, [moodToday?.currentMood?.mood]);
+
   const [moodJournalText, setMoodJournalText] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -443,10 +475,17 @@ export function DashboardOverview() {
                 </p>
               </div>
             </div>
-            <DailyMoodOrb
-              mood={selectedMood}
-              onOpenJournal={() => setIsMoodJournalOpen(true)}
-            />
+            <div className="space-y-2">
+              <DailyMoodOrb
+                mood={syncedMood}
+                onOpenJournal={() => setIsMoodJournalOpen(true)}
+              />
+              <p className="text-xs text-white/70">
+                {moodToday?.currentMood?.mood
+                  ? `Synced from mood tracker: ${moodToday.currentMood.mood}`
+                  : "No mood recorded today yet. You can still log a reflection."}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-4 self-start">
