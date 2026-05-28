@@ -38,6 +38,15 @@ describe('CirclesService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+    note: {
+      findFirst: jest.fn(),
+    },
+    circleSharedNote: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -152,12 +161,6 @@ describe('CirclesService', () => {
         id: 'owner-id',
         name: 'Owner User',
         email: 'owner@example.com',
-        gender: null,
-        dob: null,
-        mobileNumber: null,
-        relationshipStatus: null,
-        createdAt: new Date('2026-05-26T00:00:00.000Z'),
-        updatedAt: new Date('2026-05-26T00:00:00.000Z'),
       },
     ]);
     prismaMock.$transaction.mockImplementation(async (operations: Promise<unknown>[]) =>
@@ -334,5 +337,111 @@ describe('CirclesService', () => {
     await expect(
       service.inviteMember('circle-id', { email: 'member@example.com' }, currentUser),
     ).rejects.toThrow(new BadRequestException('User is already part of this circle'));
+  });
+
+  it('lists real shared notes for a circle', async () => {
+    prismaMock.circle.findUnique.mockResolvedValue(baseCircle);
+    prismaMock.circleMember.findUnique.mockResolvedValue({
+      id: 'membership-id',
+      circleId: 'circle-id',
+      userId: 'owner-id',
+      status: 'accepted',
+      role: 'owner',
+    });
+    prismaMock.circleSharedNote.findMany.mockResolvedValue([
+      {
+        id: 'shared-1',
+        circleId: 'circle-id',
+        noteId: 'note-1',
+        sharedByUserId: 'owner-id',
+        createdAt: new Date('2026-05-26T00:00:00.000Z'),
+        note: {
+          id: 'note-1',
+          title: 'Planning Note',
+          content: '<p>Details</p>',
+          tags: 'planning,work',
+          isFavorite: 1,
+          userId: 'owner-id',
+          createdAt: new Date('2026-05-26T00:00:00.000Z'),
+          updatedAt: new Date('2026-05-26T00:00:00.000Z'),
+        },
+        sharedBy: {
+          id: 'owner-id',
+          name: 'Owner User',
+          email: 'owner@example.com',
+        },
+      },
+    ]);
+
+    await expect(service.listSharedNotes('circle-id', currentUser)).resolves.toEqual([
+      expect.objectContaining({
+        id: 'shared-1',
+        noteId: 'note-1',
+        note: expect.objectContaining({
+          title: 'Planning Note',
+          tags: ['planning', 'work'],
+          isFavorite: true,
+        }),
+      }),
+    ]);
+  });
+
+  it('shares a user note into a circle', async () => {
+    prismaMock.circle.findUnique.mockResolvedValue(baseCircle);
+    prismaMock.circleMember.findUnique.mockResolvedValue({
+      id: 'membership-id',
+      circleId: 'circle-id',
+      userId: 'owner-id',
+      status: 'accepted',
+      role: 'owner',
+    });
+    prismaMock.note.findFirst.mockResolvedValue({ id: 'note-1' });
+    prismaMock.circleSharedNote.findUnique.mockResolvedValue(null);
+    prismaMock.circleSharedNote.create.mockResolvedValue({
+      id: 'shared-1',
+      circleId: 'circle-id',
+      noteId: 'note-1',
+      sharedByUserId: 'owner-id',
+      createdAt: new Date('2026-05-26T00:00:00.000Z'),
+      note: {
+        id: 'note-1',
+        title: 'Planning Note',
+        content: '<p>Details</p>',
+        tags: null,
+        isFavorite: 0,
+        userId: 'owner-id',
+        createdAt: new Date('2026-05-26T00:00:00.000Z'),
+        updatedAt: new Date('2026-05-26T00:00:00.000Z'),
+      },
+      sharedBy: {
+        id: 'owner-id',
+        name: 'Owner User',
+        email: 'owner@example.com',
+      },
+    });
+
+    await expect(service.shareNote('circle-id', { noteId: 'note-1' }, currentUser)).resolves.toEqual(
+      expect.objectContaining({ noteId: 'note-1' }),
+    );
+  });
+
+  it('removes a shared note from a circle', async () => {
+    prismaMock.circle.findUnique.mockResolvedValue(baseCircle);
+    prismaMock.circleMember.findUnique.mockResolvedValue({
+      id: 'membership-id',
+      circleId: 'circle-id',
+      userId: 'owner-id',
+      status: 'accepted',
+      role: 'owner',
+    });
+    prismaMock.circleSharedNote.findUnique.mockResolvedValue({
+      id: 'shared-1',
+      sharedByUserId: 'owner-id',
+    });
+    prismaMock.circleSharedNote.delete.mockResolvedValue({ id: 'shared-1' });
+
+    await expect(service.unshareNote('circle-id', 'note-1', currentUser)).resolves.toEqual({
+      message: 'Shared note removed successfully',
+    });
   });
 });

@@ -2,9 +2,11 @@ import { AuthenticatedUser } from '../../common/decorators/current-user.decorato
 import { CirclesService } from './circles.service';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
+import { ShareCircleNoteDto } from './dto/share-circle-note.dto';
 import { UpdateCircleDto } from './dto/update-circle.dto';
 import { CircleMember } from './entities/circle-member.entity';
 import { Circle } from './entities/circle.entity';
+import { CircleSharedNoteEntity } from './entities/circle-shared-note.entity';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 export declare class CirclesController {
@@ -28,6 +30,11 @@ export declare class CirclesController {
         message: string;
     }>;
     inviteMember(id: string, inviteCircleMemberDto: InviteCircleMemberDto, currentUser: AuthenticatedUser): Promise<CircleMember | {
+        message: string;
+    }>;
+    listSharedNotes(id: string, currentUser: AuthenticatedUser): Promise<CircleSharedNoteEntity[]>;
+    shareNote(id: string, shareCircleNoteDto: ShareCircleNoteDto, currentUser: AuthenticatedUser): Promise<CircleSharedNoteEntity>;
+    unshareNote(id: string, noteId: string, currentUser: AuthenticatedUser): Promise<{
         message: string;
     }>;
 }

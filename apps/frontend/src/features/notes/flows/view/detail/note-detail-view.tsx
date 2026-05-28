@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Clock3, Loader2, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock3, Copy, Loader2, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { NoteEditor } from '@/features/notes/flows/manage/editor/note-editor';
 import { notesQueryKeys } from '@/features/notes/shared/data/notes.query-keys';
 import { notesService } from '@/features/notes/shared/data/notes.service';
+import { buildDuplicateNotePayload } from '@/features/notes/shared/domain/notes.utils';
 import { useNoteDetail } from './use-note-detail';
 
 function formatDate(value: string) {
@@ -52,6 +53,17 @@ export function NoteDetailView({ id }: { id: string }) {
     onError: () => toast.error('Could not update favorite status'),
   });
 
+  const duplicateMutation = useMutation({
+    mutationFn: (sourceNote: NonNullable<typeof note>) =>
+      notesService.create(buildDuplicateNotePayload(sourceNote)),
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: notesQueryKeys.all });
+      toast.success('Note duplicated');
+      window.location.replace(`/notes/${created.id}`);
+    },
+    onError: () => toast.error('Could not duplicate note'),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: () => notesService.remove(id),
     onSuccess: async () => {
@@ -71,7 +83,11 @@ export function NoteDetailView({ id }: { id: string }) {
   }
 
   const handleFavoriteToggle = () => {
-    favoriteMutation.mutate(!Boolean(note.favorite));
+    favoriteMutation.mutate(!Boolean(note.isFavorite));
+  };
+
+  const handleDuplicate = () => {
+    duplicateMutation.mutate(note);
   };
 
   const contentMarkup = useMemo(() => ({ __html: note.content }), [note.content]);
@@ -108,8 +124,12 @@ export function NoteDetailView({ id }: { id: string }) {
           <Button type="button" variant="secondary" size="sm" onClick={() => setIsEditing((v) => !v)}>
             {isEditing ? 'Preview' : 'Edit'}
           </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={handleDuplicate} disabled={duplicateMutation.isPending}>
+            <Copy className="h-4 w-4" />
+            {duplicateMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+          </Button>
           <Button type="button" variant="secondary" size="icon" onClick={handleFavoriteToggle} disabled={favoriteMutation.isPending}>
-            <Star className={`h-4 w-4 ${note.favorite ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+            <Star className={`h-4 w-4 ${note.isFavorite ? 'fill-yellow-400 text-yellow-500' : ''}`} />
           </Button>
           <Button
             type="button"

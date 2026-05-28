@@ -280,7 +280,7 @@ export function PlaylistListView() {
   if (showLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <motion.div
               key={index}
@@ -596,7 +596,7 @@ export function PlaylistListView() {
             ) : null}
           </div>
         ) : (
-          <div className="grid justify-items-center gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {visiblePlaylists.map((playlist) => {
               const tracks = trackUrlsToItems(playlist.urls);
               const coverImage = playlistArtworkMap[playlist.id] || getPlaylistArtwork(playlist.urls, playlist.name);
@@ -607,7 +607,7 @@ export function PlaylistListView() {
                 <motion.article
                   key={playlist.id}
                   className={cn(
-                    'group relative w-full max-w-[350px] overflow-hidden rounded-[1.4rem] border bg-card/80 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_20px_42px_-26px_rgba(14,165,233,0.35)]',
+                    'group relative w-full max-w-none overflow-hidden rounded-[1.4rem] border bg-card/80 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_20px_42px_-26px_rgba(14,165,233,0.35)] sm:max-w-[350px]',
                     isFeatured ? 'border-cyan-400/40 ring-1 ring-cyan-300/25' : 'border-border/70',
                   )}
                   initial={{ opacity: 0, y: 10 }}

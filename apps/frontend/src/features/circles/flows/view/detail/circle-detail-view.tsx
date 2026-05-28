@@ -12,6 +12,7 @@ import {
   Copy,
   Mail,
   MessageSquare,
+  Plus,
   Shield,
   Sparkles,
   UserMinus,
@@ -28,10 +29,17 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { circlesService } from '../../../shared/data/circles.service';
 import { useCircleDetail } from './use-circle-detail';
+import { useCircleSharedNotes } from './use-circle-shared-notes';
+import { CircleNotePickerDialog } from './circle-note-picker-dialog';
 import { circlesQueryKeys } from '../../../shared/data/circles.query-keys';
 import { usersQueryKeys } from '@/features/users/shared/data/users.query-keys';
 import { usersService } from '@/features/users/shared/data/users.service';
+import { notesQueryKeys } from '@/features/notes/shared/data/notes.query-keys';
 import { notesService } from '@/features/notes/shared/data/notes.service';
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 function initials(name: string) {
   const values = name.trim().split(/\s+/).filter(Boolean);
@@ -70,8 +78,13 @@ function gradientFor(value: string) {
 export function CircleDetailView({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const { data: circle, isPending, isError } = useCircleDetail(id);
+  const { data: sharedNotes = [] } = useCircleSharedNotes(id);
   const { data: me } = useQuery({ queryKey: usersQueryKeys.me(), queryFn: usersService.getMe });
-  const { data: notes = [] } = useQuery({ queryKey: ['notes', 'list'], queryFn: notesService.list });
+  const { data: notes = [] } = useQuery({
+    queryKey: notesQueryKeys.list(),
+    queryFn: notesService.list,
+    enabled: Boolean(id),
+  });
 
   const [inviteEmail, setInviteEmail] = useState('');
   const [copied, setCopied] = useState(false);
@@ -80,6 +93,7 @@ export function CircleDetailView({ id }: { id: string }) {
   const [editableName, setEditableName] = useState('');
   const [editableDescription, setEditableDescription] = useState('');
   const [isDeleteCircleDialogOpen, setIsDeleteCircleDialogOpen] = useState(false);
+  const [isNotePickerOpen, setIsNotePickerOpen] = useState(false);
 
   function getInviteErrorMessage(error: unknown) {
     const maybeAxiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
@@ -149,6 +163,25 @@ export function CircleDetailView({ id }: { id: string }) {
       toast.success('Member removed');
     },
     onError: () => toast.error('Unable to remove member'),
+  });
+
+  const shareNoteMutation = useMutation({
+    mutationFn: (noteId: string) => circlesService.shareNote(id, { noteId }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.sharedNotes(id) });
+      toast.success('Note shared to circle');
+      setIsNotePickerOpen(false);
+    },
+    onError: () => toast.error('Unable to share note'),
+  });
+
+  const unshareNoteMutation = useMutation({
+    mutationFn: (noteId: string) => circlesService.unshareNote(id, noteId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: circlesQueryKeys.sharedNotes(id) });
+      toast.success('Shared note removed');
+    },
+    onError: () => toast.error('Unable to remove shared note'),
   });
 
   const updateCircleMutation = useMutation({
@@ -221,12 +254,14 @@ export function CircleDetailView({ id }: { id: string }) {
   const myMembership = members.find((member) => member.userId === me?.id);
   const isOwner = circle.ownerId === me?.id;
   const isInvited = !isOwner && myMembership?.status === 'invited';
+  const canCollaborate = isOwner || myMembership?.status === 'accepted';
+
+  const sharedNoteIds = new Set(sharedNotes.map((sharedNote) => sharedNote.noteId));
+  const shareableNotes = notes.filter((note) => !sharedNoteIds.has(note.id));
 
   const inviteLink = typeof window !== 'undefined'
     ? `${window.location.origin}/circles/${circle.id}?invite=true`
     : `/circles/${circle.id}?invite=true`;
-
-  const sharedNotes = notes.slice(0, 5);
 
   const activityItems: Array<{ id: string; title: string; subtitle: string; time: string }> = [
     {
@@ -247,11 +282,11 @@ export function CircleDetailView({ id }: { id: string }) {
       subtitle: member.role === 'owner' ? 'Owner is active' : 'Ready to collaborate',
       time: member.updatedAt || member.createdAt || circle.createdAt,
     })),
-    ...sharedNotes.map((note) => ({
-      id: `note-${note.id}`,
-      title: `Shared note: ${note.title}`,
-      subtitle: 'Recently updated in your workspace',
-      time: note.updatedAt,
+    ...sharedNotes.map((sharedNote) => ({
+      id: `note-${sharedNote.id}`,
+      title: `${sharedNote.note.title} was shared`,
+      subtitle: `Shared by ${sharedNote.sharedBy?.name || 'a collaborator'}`,
+      time: sharedNote.createdAt,
     })),
   ]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
@@ -287,7 +322,7 @@ export function CircleDetailView({ id }: { id: string }) {
 
             <div className="space-y-5">
               <div>
-                <h1 className="text-4xl font-semibold tracking-tight">{circle.name}</h1>
+                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{circle.name}</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-white/70">
                   {circle.description || 'A warm collaborative space for plans, notes, and shared progress.'}
                 </p>
@@ -303,8 +338,8 @@ export function CircleDetailView({ id }: { id: string }) {
                   <p className="mt-2 text-3xl font-semibold">{invitedMembers.length}</p>
                 </div>
                 <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">Shared notes</p>
-                  <p className="mt-2 text-3xl font-semibold">{sharedNotes.length}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/45">Activity</p>
+                  <p className="mt-2 text-3xl font-semibold">{activityItems.length}</p>
                 </div>
               </div>
 
@@ -383,7 +418,7 @@ export function CircleDetailView({ id }: { id: string }) {
               <div className="mt-5 space-y-4">
                 <div>
                   <Label className="mb-2 block text-white/85">Email</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       value={inviteEmail}
                       onChange={(event) => setInviteEmail(event.target.value)}
@@ -403,7 +438,7 @@ export function CircleDetailView({ id }: { id: string }) {
 
                 <div>
                   <Label className="mb-2 block text-white/85">Invite link</Label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Input value={inviteLink} readOnly className="h-11 rounded-2xl border-white/10 bg-white/5 text-white" />
                     <Button
                       type="button"
@@ -492,6 +527,34 @@ export function CircleDetailView({ id }: { id: string }) {
                 </div>
               </div>
             ) : null}
+
+            {canCollaborate ? (
+              <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/5 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-white/85">Share notes to this circle</p>
+                    <p className="mt-1 text-xs text-white/60">Open a cleaner picker to search, preview, and share one note at a time.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsNotePickerOpen(true)}
+                    disabled={!shareableNotes.length}
+                    className="rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Open note picker
+                  </Button>
+                </div>
+                {shareableNotes.length ? (
+                  <p className="text-sm text-white/65">
+                    {shareableNotes.length} note{shareableNotes.length === 1 ? '' : 's'} ready to share.
+                  </p>
+                ) : (
+                  <p className="text-sm text-white/65">All of your current notes are already shared here.</p>
+                )}
+              </div>
+            ) : null}
           </div>
         </aside>
       </section>
@@ -509,7 +572,10 @@ export function CircleDetailView({ id }: { id: string }) {
           </div>
 
           <div className="space-y-3">
-            {(members.length ? members : [{ id: 'owner-fallback', userId: circle.ownerId, role: 'owner', status: 'accepted', user: me } as any]).map((member) => {
+            {(members.length
+              ? members
+              : [{ id: 'owner-fallback', userId: circle.ownerId, role: 'owner', status: 'accepted', user: me } as any]
+            ).map((member) => {
               const isMemberOwner = member.role === 'owner';
               const name = member.user?.name || (isMemberOwner ? 'Circle Owner' : `Member ${member.userId.slice(0, 4)}`);
 
@@ -559,23 +625,54 @@ export function CircleDetailView({ id }: { id: string }) {
         </div>
 
         <div className="space-y-4 rounded-[1.8rem] border border-border/70 bg-card/75 p-5 shadow-[0_18px_45px_-34px_rgba(15,23,42,0.4)]">
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Shared notes</p>
-            <h3 className="mt-2 text-xl font-semibold">Recent collaborative context</h3>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">Shared notes</p>
+              <h3 className="mt-2 text-xl font-semibold">Real collaborative notes</h3>
+            </div>
+            <Badge variant="outline" className="rounded-full">
+              {sharedNotes.length} shared
+            </Badge>
           </div>
 
           <div className="space-y-3">
             {sharedNotes.length ? (
-              sharedNotes.map((note) => (
-                <div key={note.id} className="rounded-[1.2rem] border border-border/70 bg-background/80 p-3">
-                  <p className="text-sm font-medium">{note.title}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.content.replace(/<[^>]+>/g, ' ')}</p>
-                  <p className="mt-2 text-[11px] text-muted-foreground">Updated {formatDate(note.updatedAt)}</p>
-                </div>
-              ))
+              sharedNotes.map((sharedNote) => {
+                const canRemoveSharedNote = isOwner || sharedNote.sharedByUserId === me?.id;
+
+                return (
+                  <div key={sharedNote.id} className="rounded-[1.2rem] border border-border/70 bg-background/80 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">{sharedNote.note.title}</p>
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {stripHtml(sharedNote.note.content) || 'No content'}
+                        </p>
+                      </div>
+                      {canRemoveSharedNote ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => unshareNoteMutation.mutate(sharedNote.noteId)}
+                          disabled={unshareNoteMutation.isPending}
+                        >
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                      <span>Shared by {sharedNote.sharedBy?.name || 'a collaborator'}</span>
+                      <span>•</span>
+                      <span>{formatDate(sharedNote.createdAt)}</span>
+                    </div>
+                  </div>
+                );
+              })
             ) : (
               <div className="rounded-[1.2rem] border border-dashed border-border/70 bg-background/80 p-5 text-sm text-muted-foreground">
-                No notes available yet. Create or share notes to fill this space.
+                No notes have been shared to this circle yet.
               </div>
             )}
           </div>
@@ -603,10 +700,10 @@ export function CircleDetailView({ id }: { id: string }) {
               className="flex items-start gap-3 rounded-[1.2rem] border border-border/70 bg-background/80 p-3"
             >
               <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                {item.id.startsWith('note-') ? (
-                  <MessageSquare className="h-4 w-4" />
-                ) : item.id.startsWith('invite-') ? (
+                {item.id.startsWith('invite-') ? (
                   <Mail className="h-4 w-4" />
+                ) : item.id.startsWith('note-') ? (
+                  <MessageSquare className="h-4 w-4" />
                 ) : item.id.startsWith('join-') ? (
                   <Users className="h-4 w-4" />
                 ) : (
@@ -662,6 +759,14 @@ export function CircleDetailView({ id }: { id: string }) {
         confirmLabel="Delete circle"
         isLoading={deleteCircleMutation.isPending}
         onConfirm={confirmDeleteCircle}
+      />
+
+      <CircleNotePickerDialog
+        open={isNotePickerOpen}
+        onOpenChange={setIsNotePickerOpen}
+        notes={shareableNotes}
+        isSharing={shareNoteMutation.isPending}
+        onShare={(noteId) => shareNoteMutation.mutate(noteId)}
       />
     </div>
   );

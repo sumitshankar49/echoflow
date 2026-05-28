@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
   circlesRemoveMember: vi.fn(),
   circlesUpdate: vi.fn(),
   circlesRemove: vi.fn(),
+  circlesListSharedNotes: vi.fn(),
+  circlesShareNote: vi.fn(),
+  circlesUnshareNote: vi.fn(),
   invalidateQueries: vi.fn(),
   dialogRender: vi.fn(),
   toastSuccess: vi.fn(),
@@ -61,6 +64,9 @@ vi.mock('@/features/circles/shared/data/circles.service', () => ({
     removeMember: (...args: any[]) => mocks.circlesRemoveMember(...args),
     update: (...args: any[]) => mocks.circlesUpdate(...args),
     remove: (...args: any[]) => mocks.circlesRemove(...args),
+    listSharedNotes: (...args: any[]) => mocks.circlesListSharedNotes(...args),
+    shareNote: (...args: any[]) => mocks.circlesShareNote(...args),
+    unshareNote: (...args: any[]) => mocks.circlesUnshareNote(...args),
   },
 }));
 
@@ -86,6 +92,14 @@ vi.mock('@/components/common/confirm-action-dialog', () => ({
   },
 }));
 
+vi.mock('@/components/ui/alert-dialog', () => ({
+  AlertDialog: ({ open, children }: any) => (open ? <div data-testid="note-picker-dialog">{children}</div> : null),
+  AlertDialogContent: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+  AlertDialogHeader: ({ children }: any) => <div>{children}</div>,
+  AlertDialogTitle: ({ children }: any) => <h2>{children}</h2>,
+  AlertDialogDescription: ({ children }: any) => <p>{children}</p>,
+}));
+
 describe('CircleDetailView', () => {
   const writeTextMock = vi.fn();
 
@@ -106,6 +120,9 @@ describe('CircleDetailView', () => {
     mocks.circlesRemoveMember.mockReset();
     mocks.circlesUpdate.mockReset();
     mocks.circlesRemove.mockReset();
+    mocks.circlesListSharedNotes.mockReset();
+    mocks.circlesShareNote.mockReset();
+    mocks.circlesUnshareNote.mockReset();
     mocks.invalidateQueries.mockReset();
     mocks.dialogRender.mockReset();
     mocks.toastSuccess.mockReset();
@@ -120,6 +137,9 @@ describe('CircleDetailView', () => {
     mocks.circlesRemoveMember.mockResolvedValue({});
     mocks.circlesUpdate.mockResolvedValue({});
     mocks.circlesRemove.mockResolvedValue({});
+    mocks.circlesListSharedNotes.mockResolvedValue([]);
+    mocks.circlesShareNote.mockResolvedValue({});
+    mocks.circlesUnshareNote.mockResolvedValue({});
 
     mocks.useMutation.mockReturnValue(createMutation());
 
@@ -129,6 +149,9 @@ describe('CircleDetailView', () => {
         return { data: { id: 'user-1' } };
       }
       if (key[0] === 'notes' && key[1] === 'list') {
+        return { data: [] };
+      }
+      if (key[0] === 'circles' && key[1] === 'shared-notes') {
         return { data: [] };
       }
       return { data: null };
@@ -205,6 +228,9 @@ describe('CircleDetailView', () => {
         return { data: { id: 'user-2' } };
       }
       if (key[0] === 'notes' && key[1] === 'list') {
+        return { data: [] };
+      }
+      if (key[0] === 'circles' && key[1] === 'shared-notes') {
         return { data: [] };
       }
       return { data: null };
@@ -316,6 +342,9 @@ describe('CircleDetailView', () => {
       if (key[0] === 'notes' && key[1] === 'list') {
         return { data: [] };
       }
+      if (key[0] === 'circles' && key[1] === 'shared-notes') {
+        return { data: [] };
+      }
       return { data: null };
     });
 
@@ -382,6 +411,34 @@ describe('CircleDetailView', () => {
           ],
         };
       }
+      if (key[0] === 'circles' && key[1] === 'shared-notes') {
+        return {
+          data: [
+            {
+              id: 'shared-1',
+              circleId: 'circle-1',
+              noteId: 'note-1',
+              sharedByUserId: 'user-1',
+              createdAt: '2026-01-02T00:00:00.000Z',
+              note: {
+                id: 'note-1',
+                title: 'Planning Note',
+                content: '<p>Shared details</p>',
+                tags: [],
+                isFavorite: false,
+                userId: 'user-1',
+                createdAt: '2026-01-02T00:00:00.000Z',
+                updatedAt: '2026-01-02T00:00:00.000Z',
+              },
+              sharedBy: {
+                id: 'user-1',
+                name: 'Candy',
+                email: 'candy@example.com',
+              },
+            },
+          ],
+        };
+      }
       return { data: null };
     });
 
@@ -444,6 +501,7 @@ describe('CircleDetailView', () => {
     });
 
     expect(screen.getByText('Planning Note')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open note picker' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete circle' }));
     fireEvent.click(screen.getByRole('button', { name: 'confirm-Delete circle' }));
@@ -463,6 +521,79 @@ describe('CircleDetailView', () => {
     await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledWith('member-2');
     });
+  });
+
+  it('opens the note picker and shares a note from the modal', async () => {
+    const mutate = vi.fn();
+    const mutation = {
+      mutate,
+      mutateAsync: vi.fn(),
+      isPending: false,
+    };
+
+    mocks.useMutation.mockReturnValue(mutation);
+
+    mocks.useQuery.mockImplementation((config: any) => {
+      const key = Array.isArray(config?.queryKey) ? config.queryKey : [];
+      if (key[0] === 'users' && key[1] === 'me') {
+        return { data: { id: 'user-1' } };
+      }
+      if (key[0] === 'notes' && key[1] === 'list') {
+        return {
+          data: [
+            {
+              id: 'note-2',
+              title: 'Ideas Vault',
+              content: '<p>Draft plan for the group.</p>',
+              tags: ['ideas'],
+              isFavorite: true,
+              updatedAt: '2026-01-02T00:00:00.000Z',
+            },
+          ],
+        };
+      }
+      if (key[0] === 'circles' && key[1] === 'shared-notes') {
+        return { data: [] };
+      }
+      return { data: null };
+    });
+
+    mocks.useCircleDetail.mockReturnValue({
+      isPending: false,
+      isError: false,
+      data: {
+        id: 'circle-1',
+        name: 'Family Circle',
+        description: 'Family updates',
+        ownerId: 'user-1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        members: [
+          {
+            id: 'owner-1',
+            circleId: 'circle-1',
+            userId: 'user-1',
+            role: 'owner',
+            status: 'accepted',
+            user: {
+              id: 'user-1',
+              name: 'Candy',
+              email: 'candy@example.com',
+            },
+          },
+        ],
+      },
+    });
+
+    render(<CircleDetailView id="circle-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open note picker' }));
+
+    expect(screen.getByTestId('note-picker-dialog')).toBeInTheDocument();
+    expect(screen.getByText('Ideas Vault')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+    expect(mutate).toHaveBeenCalledWith('note-2');
   });
 
   it('covers all mutation callbacks and remove-member no-op confirm branch', async () => {
@@ -504,8 +635,8 @@ describe('CircleDetailView', () => {
 
     render(<CircleDetailView id="circle-1" />);
 
-    const configs = mocks.useMutation.mock.calls.map(([config]) => config).slice(0, 7);
-    expect(configs).toHaveLength(7);
+    const configs = mocks.useMutation.mock.calls.map(([config]) => config);
+    expect(configs.length).toBeGreaterThanOrEqual(9);
 
     await act(async () => {
       await configs[0].mutationFn?.('member@example.com');
@@ -513,8 +644,10 @@ describe('CircleDetailView', () => {
       await configs[2].mutationFn?.();
       await configs[3].mutationFn?.();
       await configs[4].mutationFn?.('member-2');
-      await configs[5].mutationFn?.({ name: 'Updated', description: 'Desc' });
-      await configs[6].mutationFn?.();
+      await configs[5].mutationFn?.('note-1');
+      await configs[6].mutationFn?.('note-1');
+      await configs[7].mutationFn?.({ name: 'Updated', description: 'Desc' });
+      await configs[8].mutationFn?.();
 
       await configs[0].onSuccess?.({ message: 'Invite sent with context' });
       await configs[0].onSuccess?.({});
@@ -537,6 +670,12 @@ describe('CircleDetailView', () => {
 
       await configs[6].onSuccess?.();
       configs[6].onError?.();
+
+      await configs[7].onSuccess?.();
+      configs[7].onError?.();
+
+      await configs[8].onSuccess?.();
+      configs[8].onError?.();
     });
 
     const removeDialogProps = mocks.dialogRender.mock.calls
@@ -551,6 +690,8 @@ describe('CircleDetailView', () => {
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Invitation accepted');
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Circle details updated');
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Circle deleted');
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('Note shared to circle');
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('Shared note removed');
     expect(mocks.circlesInvite).toHaveBeenCalledWith('circle-1', { email: 'member@example.com' });
     expect(mocks.circlesAccept).toHaveBeenCalledWith('circle-1');
     expect(mocks.circlesDecline).toHaveBeenCalledWith('circle-1');
@@ -561,6 +702,8 @@ describe('CircleDetailView', () => {
       description: 'Desc',
     });
     expect(mocks.circlesRemove).toHaveBeenCalledWith('circle-1');
+    expect(mocks.circlesShareNote).toHaveBeenCalledWith('circle-1', { noteId: 'note-1' });
+    expect(mocks.circlesUnshareNote).toHaveBeenCalledWith('circle-1', 'note-1');
 
     Object.defineProperty(window, 'location', {
       configurable: true,

@@ -5,6 +5,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from '@/components/ui/sonner';
+import { ColorPaletteProvider } from '@/shared/theme/color-palette-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -21,11 +22,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <Toaster richColors position="top-center" />
-        <ReactQueryDevtools initialIsOpen={false} />
-      </QueryClientProvider>
+      <ColorPaletteProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <Toaster richColors position="top-center" />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </QueryClientProvider>
+      </ColorPaletteProvider>
     </ThemeProvider>
   );
 }

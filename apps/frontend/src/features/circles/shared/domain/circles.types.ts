@@ -60,3 +60,26 @@ export interface InviteMemberResponse {
   id?: string;
   message?: string;
 }
+
+export interface CircleSharedNote {
+  id: string;
+  circleId: string;
+  noteId: string;
+  sharedByUserId: string;
+  createdAt: string;
+  note: {
+    id: string;
+    title: string;
+    content: string;
+    tags?: string[] | null;
+    isFavorite: boolean;
+    userId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  sharedBy?: CircleMemberUser;
+}
+
+export interface ShareCircleNotePayload {
+  noteId: string;
+}

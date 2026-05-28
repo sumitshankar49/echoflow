@@ -38,7 +38,7 @@ export function RecentNotesCard({ isPending, recentNotes }: RecentNotesCardProps
                 key={index}
                 lineCount={4}
                 delay={index * 0.06}
-                className="min-w-[240px] max-w-[280px] border-border/50 bg-background/55"
+                className="min-w-[78vw] max-w-[280px] border-border/50 bg-background/55 sm:min-w-[240px]"
               />
             ))
           ) : recentNotes.length ? (
@@ -46,7 +46,7 @@ export function RecentNotesCard({ isPending, recentNotes }: RecentNotesCardProps
               <motion.div
                 key={note.id}
                 whileHover={{ y: -2 }}
-                className="min-w-[240px] max-w-[280px] rounded-2xl border border-border/70 bg-background/70 p-4"
+                className="min-w-[78vw] max-w-[280px] rounded-2xl border border-border/70 bg-background/70 p-4 sm:min-w-[240px]"
               >
                 <p className="line-clamp-1 font-medium">{note.title}</p>
                 <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">

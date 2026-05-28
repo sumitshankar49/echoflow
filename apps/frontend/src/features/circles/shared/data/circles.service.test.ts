@@ -202,6 +202,72 @@ describe('circlesService', () => {
     expect(mockedApiClient.post).toHaveBeenCalledWith('/circles/circle-3/leave');
   });
 
+  it('lists, shares, and unshares real shared notes', async () => {
+    mockedApiClient.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'shared-1',
+          circleId: 'circle-1',
+          noteId: 'note-1',
+          sharedByUserId: 'user-1',
+          createdAt: '2026-05-26T00:00:00.000Z',
+          note: {
+            id: 'note-1',
+            title: 'Planning Note',
+            content: '<p>Details</p>',
+            tags: null,
+            isFavorite: false,
+            userId: 'user-1',
+            createdAt: '2026-05-26T00:00:00.000Z',
+            updatedAt: '2026-05-26T00:00:00.000Z',
+          },
+          sharedBy: {
+            id: 'user-1',
+            name: 'Candy',
+            email: 'candy@example.com',
+          },
+        },
+      ],
+    });
+    mockedApiClient.post.mockResolvedValueOnce({
+      data: {
+        id: 'shared-2',
+        circleId: 'circle-1',
+        noteId: 'note-2',
+        sharedByUserId: 'user-1',
+        createdAt: '2026-05-26T00:00:00.000Z',
+        note: {
+          id: 'note-2',
+          title: 'Ideas',
+          content: '<p>Ideas</p>',
+          tags: ['ideas'],
+          isFavorite: false,
+          userId: 'user-1',
+          createdAt: '2026-05-26T00:00:00.000Z',
+          updatedAt: '2026-05-26T00:00:00.000Z',
+        },
+      },
+    });
+    mockedApiClient.delete.mockResolvedValueOnce({ data: { message: 'Shared note removed successfully' } });
+
+    await expect(circlesService.listSharedNotes('circle-1')).resolves.toEqual([
+      expect.objectContaining({
+        noteId: 'note-1',
+        note: expect.objectContaining({ tags: [] }),
+      }),
+    ]);
+    await expect(circlesService.shareNote('circle-1', { noteId: 'note-2' })).resolves.toEqual(
+      expect.objectContaining({ noteId: 'note-2' }),
+    );
+    await expect(circlesService.unshareNote('circle-1', 'note-2')).resolves.toEqual({
+      message: 'Shared note removed successfully',
+    });
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith('/circles/circle-1/shared-notes');
+    expect(mockedApiClient.post).toHaveBeenCalledWith('/circles/circle-1/shared-notes', { noteId: 'note-2' });
+    expect(mockedApiClient.delete).toHaveBeenCalledWith('/circles/circle-1/shared-notes/note-2');
+  });
+
   it('normalizes missing nested fields safely', async () => {
     mockedApiClient.get
       .mockResolvedValueOnce({

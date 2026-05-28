@@ -1,7 +1,6 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   ExternalLink,
@@ -14,111 +13,10 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { formatTime, type PlaylistTrack } from '../domain/music.utils';
 import { useTrackMetadata } from './use-track-metadata';
-
-const ReactPlayer = dynamic(() => import('react-player'), { ssr: false });
-
-function extractElapsedSeconds(payload: unknown): number | null {
-  if (typeof payload === 'number' && Number.isFinite(payload)) {
-    return payload;
-  }
-
-  if (payload && typeof payload === 'object') {
-    const value = payload as {
-      playedSeconds?: number;
-      currentTime?: number;
-      seconds?: number;
-      mediaTime?: number;
-      detail?: {
-        playedSeconds?: number;
-        currentTime?: number;
-        seconds?: number;
-        mediaTime?: number;
-      };
-      currentTarget?: { currentTime?: number };
-      target?: { currentTime?: number };
-    };
-
-    if (typeof value.playedSeconds === 'number' && Number.isFinite(value.playedSeconds)) {
-      return value.playedSeconds;
-    }
-
-    if (typeof value.currentTime === 'number' && Number.isFinite(value.currentTime)) {
-      return value.currentTime;
-    }
-
-    if (typeof value.seconds === 'number' && Number.isFinite(value.seconds)) {
-      return value.seconds;
-    }
-
-    if (typeof value.mediaTime === 'number' && Number.isFinite(value.mediaTime)) {
-      return value.mediaTime;
-    }
-
-    if (typeof value.detail?.playedSeconds === 'number' && Number.isFinite(value.detail.playedSeconds)) {
-      return value.detail.playedSeconds;
-    }
-
-    if (typeof value.detail?.currentTime === 'number' && Number.isFinite(value.detail.currentTime)) {
-      return value.detail.currentTime;
-    }
-
-    if (typeof value.detail?.seconds === 'number' && Number.isFinite(value.detail.seconds)) {
-      return value.detail.seconds;
-    }
-
-    if (typeof value.detail?.mediaTime === 'number' && Number.isFinite(value.detail.mediaTime)) {
-      return value.detail.mediaTime;
-    }
-
-    if (typeof value.currentTarget?.currentTime === 'number' && Number.isFinite(value.currentTarget.currentTime)) {
-      return value.currentTarget.currentTime;
-    }
-
-    if (typeof value.target?.currentTime === 'number' && Number.isFinite(value.target.currentTime)) {
-      return value.target.currentTime;
-    }
-  }
-
-  return null;
-}
-
-function extractDurationSeconds(payload: unknown): number | null {
-  if (typeof payload === 'number' && Number.isFinite(payload)) {
-    return payload;
-  }
-
-  if (payload && typeof payload === 'object') {
-    const value = payload as {
-      duration?: number;
-      detail?: { duration?: number };
-      currentTarget?: { duration?: number };
-      target?: { duration?: number };
-    };
-
-    if (typeof value.duration === 'number' && Number.isFinite(value.duration)) {
-      return value.duration;
-    }
-
-    if (typeof value.detail?.duration === 'number' && Number.isFinite(value.detail.duration)) {
-      return value.detail.duration;
-    }
-
-    if (typeof value.currentTarget?.duration === 'number' && Number.isFinite(value.currentTarget.duration)) {
-      return value.currentTarget.duration;
-    }
-
-    if (typeof value.target?.duration === 'number' && Number.isFinite(value.target.duration)) {
-      return value.target.duration;
-    }
-  }
-
-  return null;
-}
 
 interface FocusFlowMiniPlayerProps {
   playlistName: string;
@@ -152,7 +50,6 @@ export function FocusFlowMiniPlayer({
   onPlaybackError,
 }: FocusFlowMiniPlayerProps) {
   const metadata = useTrackMetadata(track?.url ?? null);
-  const playerRef = useRef<HTMLVideoElement | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [volume, setVolume] = useState(0.85);
 
@@ -177,14 +74,6 @@ export function FocusFlowMiniPlayer({
     const clampedProgress = Math.max(0, Math.min(100, nextProgress));
     const seekSeconds = (clampedProgress / 100) * safeTotal;
     onProgressChange?.(seekSeconds);
-
-    const instance = playerRef.current;
-
-    if (!instance) {
-      return;
-    }
-
-    instance.currentTime = seekSeconds;
   };
 
   const handleSeekInput = (nextValue: string) => {
@@ -198,46 +87,6 @@ export function FocusFlowMiniPlayer({
       animate={{ opacity: 1, y: [0, -2, 0], scale: 1 }}
       transition={{ duration: 0.6, y: { duration: 5.8, repeat: Infinity, ease: 'easeInOut' } }}
     >
-      <div className="pointer-events-none fixed -left-[9999px] top-0 h-0 w-0 overflow-hidden opacity-0" aria-hidden>
-        <ReactPlayer
-          ref={playerRef}
-          key={track.url}
-          src={track.url}
-          playing={isPlaying}
-          controls={false}
-          muted={volume <= 0}
-          volume={volume}
-          playsInline
-          width="0"
-          height="0"
-          onPlay={() => onPlaybackStateChange?.(true)}
-          onPause={() => onPlaybackStateChange?.(false)}
-          onTimeUpdate={(payload) => {
-            const elapsed = extractElapsedSeconds(payload);
-            if (elapsed !== null) {
-              onProgressChange?.(elapsed);
-            }
-          }}
-          onProgress={(payload) => {
-            const elapsed = extractElapsedSeconds(payload);
-            if (elapsed !== null) {
-              onProgressChange?.(elapsed);
-            }
-          }}
-          onDurationChange={(payload) => {
-            const duration = extractDurationSeconds(payload);
-            if (duration !== null && duration > 0) {
-              onDurationChange?.(duration);
-            }
-          }}
-          onEnded={() => onTrackEnded?.()}
-          onError={() => {
-            onPlaybackError?.();
-            toast.error('This source could not be played here. Try a YouTube link.');
-          }}
-        />
-      </div>
-
       <div
         className={cn(
           'mx-auto w-full overflow-hidden rounded-[2rem] border border-cyan-100/10 bg-slate-950/92 shadow-[0_24px_75px_-30px_rgba(15,23,42,0.9),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl',
@@ -331,7 +180,7 @@ export function FocusFlowMiniPlayer({
                   <p className="mt-1 truncate text-[11px] text-white/50">{playlistName}</p>
                 </div>
 
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex flex-wrap items-center justify-start gap-2 md:justify-end">
                     <span className="rounded-full border border-white/20 bg-slate-800/55 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-white/80">
                     {track.sourceLabel}
                   </span>
@@ -482,7 +331,7 @@ export function FocusFlowMiniPlayer({
                     max={100}
                     value={Math.round(volume * 100)}
                     onChange={(event) => setVolume(Math.max(0, Math.min(1, Number(event.target.value) / 100)))}
-                    className="h-1.5 w-28 cursor-pointer accent-cyan-300"
+                    className="h-1.5 w-20 cursor-pointer accent-cyan-300 sm:w-28"
                     aria-label="Volume"
                   />
                 </div>

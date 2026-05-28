@@ -13,8 +13,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
+import { ShareCircleNoteDto } from './dto/share-circle-note.dto';
 import { UpdateCircleDto } from './dto/update-circle.dto';
 import { CircleMember } from './entities/circle-member.entity';
+import { CircleSharedNoteEntity } from './entities/circle-shared-note.entity';
 import { Circle } from './entities/circle.entity';
 
 @Injectable()
@@ -29,13 +31,96 @@ export class CirclesService {
     id: true,
     name: true,
     email: true,
-    gender: true,
-    dob: true,
-    mobileNumber: true,
-    relationshipStatus: true,
-    createdAt: true,
-    updatedAt: true,
   } as const;
+
+  private mapTagsFromDb(tags: string | null): string[] | null {
+    if (!tags) {
+      return null;
+    }
+
+    const parsed = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    return parsed.length > 0 ? parsed : null;
+  }
+
+  private mapSharedNote(record: {
+    id: string;
+    circleId: string;
+    noteId: string;
+    sharedByUserId: string;
+    createdAt: Date;
+    note: {
+      id: string;
+      title: string;
+      content: string;
+      tags: string | null;
+      isFavorite: number;
+      userId: string;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    sharedBy?: {
+      id: string;
+      name: string;
+      email: string;
+    } | null;
+  }): CircleSharedNoteEntity {
+    return {
+      id: record.id,
+      circleId: record.circleId,
+      noteId: record.noteId,
+      sharedByUserId: record.sharedByUserId,
+      createdAt: record.createdAt,
+      note: {
+        id: record.note.id,
+        title: record.note.title,
+        content: record.note.content,
+        tags: this.mapTagsFromDb(record.note.tags),
+        isFavorite: Boolean(record.note.isFavorite),
+        userId: record.note.userId,
+        createdAt: record.note.createdAt,
+        updatedAt: record.note.updatedAt,
+      },
+      sharedBy: record.sharedBy ?? undefined,
+    };
+  }
+
+  private async getCircleAccess(circleId: string, currentUser: AuthenticatedUser): Promise<{
+    circle: Circle;
+    membership: { id: string; status: string; role: string; userId: string } | null;
+    isOwner: boolean;
+  }> {
+    const circle = await this.prisma.circle.findUnique({ where: { id: circleId } });
+
+    if (!circle) {
+      throw new NotFoundException('Circle not found');
+    }
+
+    const membership = await this.prisma.circleMember.findUnique({
+      where: { circleId_userId: { circleId, userId: currentUser.userId } },
+    });
+
+    const isOwner = circle.ownerId === currentUser.userId;
+
+    if (!membership && !isOwner) {
+      throw new ForbiddenException('You do not have access to this circle');
+    }
+
+    return {
+      circle: circle as Circle,
+      membership,
+      isOwner,
+    };
+  }
+
+  private async getCircleCollaboratorAccess(circleId: string, currentUser: AuthenticatedUser) {
+    const access = await this.getCircleAccess(circleId, currentUser);
+
+    if (!access.isOwner && access.membership?.status !== 'accepted') {
+      throw new ForbiddenException('You must accept the invitation before sharing notes');
+    }
+
+    return access;
+  }
 
   private async attachMembers(circles: Circle[]): Promise<Circle[]> {
     if (circles.length === 0) {
@@ -133,21 +218,8 @@ export class CirclesService {
   }
 
   async findOne(id: string, currentUser: AuthenticatedUser): Promise<Circle> {
-    const circle = await this.prisma.circle.findUnique({ where: { id } });
-
-    if (!circle) {
-      throw new NotFoundException('Circle not found');
-    }
-
-    const membership = await this.prisma.circleMember.findUnique({
-      where: { circleId_userId: { circleId: id, userId: currentUser.userId } },
-    });
-
-    if (!membership && circle.ownerId !== currentUser.userId) {
-      throw new ForbiddenException('You do not have access to this circle');
-    }
-
-    const [hydratedCircle] = await this.attachMembers([circle as Circle]);
+    const { circle } = await this.getCircleAccess(id, currentUser);
+    const [hydratedCircle] = await this.attachMembers([circle]);
     return hydratedCircle;
   }
 
@@ -338,5 +410,138 @@ export class CirclesService {
         status: 'invited',
       },
     });
+  }
+
+  async listSharedNotes(circleId: string, currentUser: AuthenticatedUser): Promise<CircleSharedNoteEntity[]> {
+    await this.getCircleAccess(circleId, currentUser);
+
+    const sharedNotes = await this.prisma.circleSharedNote.findMany({
+      where: { circleId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        circleId: true,
+        noteId: true,
+        sharedByUserId: true,
+        createdAt: true,
+        note: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            tags: true,
+            isFavorite: true,
+            userId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        sharedBy: {
+          select: this.safeUserSelect,
+        },
+      },
+    });
+
+    return sharedNotes.map((sharedNote) => this.mapSharedNote(sharedNote));
+  }
+
+  async shareNote(
+    circleId: string,
+    shareCircleNoteDto: ShareCircleNoteDto,
+    currentUser: AuthenticatedUser,
+  ): Promise<CircleSharedNoteEntity> {
+    await this.getCircleCollaboratorAccess(circleId, currentUser);
+
+    const note = await this.prisma.note.findFirst({
+      where: {
+        id: shareCircleNoteDto.noteId,
+        userId: currentUser.userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!note) {
+      throw new NotFoundException('Note not found');
+    }
+
+    const existingSharedNote = await this.prisma.circleSharedNote.findUnique({
+      where: {
+        circleId_noteId: {
+          circleId,
+          noteId: shareCircleNoteDto.noteId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingSharedNote) {
+      throw new BadRequestException('Note is already shared in this circle');
+    }
+
+    const created = await this.prisma.circleSharedNote.create({
+      data: {
+        circleId,
+        noteId: shareCircleNoteDto.noteId,
+        sharedByUserId: currentUser.userId,
+      },
+      select: {
+        id: true,
+        circleId: true,
+        noteId: true,
+        sharedByUserId: true,
+        createdAt: true,
+        note: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            tags: true,
+            isFavorite: true,
+            userId: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+        sharedBy: {
+          select: this.safeUserSelect,
+        },
+      },
+    });
+
+    return this.mapSharedNote(created);
+  }
+
+  async unshareNote(
+    circleId: string,
+    noteId: string,
+    currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    const access = await this.getCircleCollaboratorAccess(circleId, currentUser);
+
+    const sharedNote = await this.prisma.circleSharedNote.findUnique({
+      where: {
+        circleId_noteId: {
+          circleId,
+          noteId,
+        },
+      },
+      select: {
+        id: true,
+        sharedByUserId: true,
+      },
+    });
+
+    if (!sharedNote) {
+      throw new NotFoundException('Shared note not found in this circle');
+    }
+
+    if (!access.isOwner && sharedNote.sharedByUserId !== currentUser.userId) {
+      throw new ForbiddenException('Only the circle owner or original sharer can remove shared notes');
+    }
+
+    await this.prisma.circleSharedNote.delete({ where: { id: sharedNote.id } });
+    return { message: 'Shared note removed successfully' };
   }
 }

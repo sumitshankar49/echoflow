@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  Copy,
   Grid2X2,
   List,
   Pencil,
@@ -24,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { NoteEditor } from '@/features/notes/flows/manage/editor/note-editor';
 import { notesQueryKeys } from '@/features/notes/shared/data/notes.query-keys';
 import { notesService } from '@/features/notes/shared/data/notes.service';
+import { buildDuplicateNotePayload } from '@/features/notes/shared/domain/notes.utils';
 import { useDebouncedValue } from '@/shared/utils/use-debounced-value';
 
 const PAGE_SIZE = 8;
@@ -97,6 +99,15 @@ export function NoteListView() {
     },
   });
 
+  const duplicateMutation = useMutation({
+    mutationFn: notesService.create,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: notesQueryKeys.all });
+      toast.success('Note duplicated');
+    },
+    onError: () => toast.error('Could not duplicate note'),
+  });
+
   const toggleFavoriteMutation = useMutation({
     mutationFn: ({ id, isFavorite }: { id: string; isFavorite: boolean }) =>
       notesService.update(id, { isFavorite }),
@@ -108,20 +119,18 @@ export function NoteListView() {
 
   const sourceNotes = debouncedQuery.trim().length > 0 ? searchResults : notes;
 
-  const hydratedNotes = useMemo(() => sourceNotes, [sourceNotes]);
-
   const allTags = useMemo(() => {
     const set = new Set<string>();
-    hydratedNotes.forEach((note) => {
+    sourceNotes.forEach((note) => {
       (note.tags ?? []).forEach((tag) => set.add(tag));
     });
     return ['all', ...Array.from(set)];
-  }, [hydratedNotes]);
+  }, [sourceNotes]);
 
   const filteredNotes = useMemo(
     () =>
-      hydratedNotes.filter((note) => {
-        if (favoritesOnly && !note.favorite) {
+      sourceNotes.filter((note) => {
+        if (favoritesOnly && !note.isFavorite) {
           return false;
         }
 
@@ -131,7 +140,7 @@ export function NoteListView() {
 
         return !deletingIds.includes(note.id);
       }),
-    [hydratedNotes, favoritesOnly, selectedTag, deletingIds],
+    [sourceNotes, favoritesOnly, selectedTag, deletingIds],
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredNotes.length / PAGE_SIZE));
@@ -191,8 +200,8 @@ export function NoteListView() {
   };
 
   const editingNote = useMemo(
-    () => (editingNoteId ? hydratedNotes.find((note) => note.id === editingNoteId) ?? null : null),
-    [editingNoteId, hydratedNotes],
+    () => (editingNoteId ? sourceNotes.find((note) => note.id === editingNoteId) ?? null : null),
+    [editingNoteId, sourceNotes],
   );
 
   const handleFavoriteToggle = async (noteId: string, currentFavorite: boolean) => {
@@ -200,6 +209,16 @@ export function NoteListView() {
       id: noteId,
       isFavorite: !currentFavorite,
     });
+  };
+
+  const handleDuplicate = async (noteId: string) => {
+    const note = sourceNotes.find((item) => item.id === noteId);
+    if (!note) {
+      toast.error('Could not duplicate note');
+      return;
+    }
+
+    await duplicateMutation.mutateAsync(buildDuplicateNotePayload(note));
   };
 
   const handleDelete = (noteId: string, noteTitle: string) => {
@@ -278,7 +297,7 @@ export function NoteListView() {
         transition={{ duration: 0.3 }}
         className="rounded-2xl border bg-background p-4 shadow-sm"
       >
-        <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -361,7 +380,7 @@ export function NoteListView() {
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 24, scale: 0.98 }}
-              className="mx-auto mt-10 w-full max-w-3xl rounded-2xl border bg-background p-6 shadow-xl"
+              className="mx-auto mt-2 w-full max-w-3xl rounded-2xl border bg-background p-4 shadow-xl sm:mt-10 sm:p-6"
             >
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-semibold">{editingNote ? 'Edit Note' : 'Create Note'}</h2>
@@ -438,9 +457,19 @@ export function NoteListView() {
                     size="icon"
                     variant="ghost"
                     className="h-8 w-8"
-                    onClick={() => handleFavoriteToggle(note.id, Boolean(note.favorite))}
+                    onClick={() => handleFavoriteToggle(note.id, Boolean(note.isFavorite))}
                   >
-                    <Star className={`h-4 w-4 ${note.favorite ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+                    <Star className={`h-4 w-4 ${note.isFavorite ? 'fill-yellow-400 text-yellow-500' : ''}`} />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => handleDuplicate(note.id)}
+                    disabled={duplicateMutation.isPending}
+                  >
+                    <Copy className="h-4 w-4" />
                   </Button>
                   <Button
                     type="button"
@@ -486,8 +515,8 @@ export function NoteListView() {
       ) : null}
 
       {!useInfiniteMode ? (
-        <div className="fixed bottom-6 left-17 z-30">
-          <div className="inline-flex items-center gap-2 rounded-lg px-2 py-1 shadow-sm backdrop-blur">
+        <div className="fixed bottom-4 left-1/2 z-30 -translate-x-1/2 sm:bottom-6 sm:left-4 sm:translate-x-0">
+          <div className="inline-flex max-w-[calc(100vw-1rem)] items-center gap-2 rounded-lg px-2 py-1 shadow-sm backdrop-blur">
             <Button
               type="button"
               variant="secondary"

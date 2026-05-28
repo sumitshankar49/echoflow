@@ -20,6 +20,9 @@ describe('CirclesController', () => {
     removeMember: jest.fn(),
     leaveCircle: jest.fn(),
     inviteMember: jest.fn(),
+    listSharedNotes: jest.fn(),
+    shareNote: jest.fn(),
+    unshareNote: jest.fn(),
   };
 
   const currentUser: AuthenticatedUser = {
@@ -137,5 +140,30 @@ describe('CirclesController', () => {
 
     await expect(controller.inviteMember('circle-id', dto, currentUser)).resolves.toEqual(response);
     expect(circlesServiceMock.inviteMember).toHaveBeenCalledWith('circle-id', dto, currentUser);
+  });
+
+  it('forwards listSharedNotes to the circles service', async () => {
+    const response = [{ id: 'shared-1', noteId: 'note-1' }];
+    circlesServiceMock.listSharedNotes.mockResolvedValue(response);
+
+    await expect(controller.listSharedNotes('circle-id', currentUser)).resolves.toEqual(response);
+    expect(circlesServiceMock.listSharedNotes).toHaveBeenCalledWith('circle-id', currentUser);
+  });
+
+  it('forwards shareNote to the circles service', async () => {
+    const dto = { noteId: 'note-1' };
+    const response = { id: 'shared-1', noteId: 'note-1' };
+    circlesServiceMock.shareNote.mockResolvedValue(response);
+
+    await expect(controller.shareNote('circle-id', dto, currentUser)).resolves.toEqual(response);
+    expect(circlesServiceMock.shareNote).toHaveBeenCalledWith('circle-id', dto, currentUser);
+  });
+
+  it('forwards unshareNote to the circles service', async () => {
+    const response = { message: 'Shared note removed successfully' };
+    circlesServiceMock.unshareNote.mockResolvedValue(response);
+
+    await expect(controller.unshareNote('circle-id', 'note-1', currentUser)).resolves.toEqual(response);
+    expect(circlesServiceMock.unshareNote).toHaveBeenCalledWith('circle-id', 'note-1', currentUser);
   });
 });

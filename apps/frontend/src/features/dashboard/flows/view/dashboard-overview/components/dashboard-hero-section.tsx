@@ -30,7 +30,7 @@ export function DashboardHeroSection({
       transition={{ duration: 0.4 }}
       className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-950/85 p-6 text-white shadow-[0_28px_80px_-46px_rgba(15,23,42,0.9)] backdrop-blur-xl sm:p-8"
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] xl:gap-7">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] xl:gap-7">
         <div className="space-y-5">
           <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-cyan-100/85">
             <Sparkles className="h-3.5 w-3.5" />

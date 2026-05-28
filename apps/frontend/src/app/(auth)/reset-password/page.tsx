@@ -1,4 +1,8 @@
+"use client";
+
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 
 import {
@@ -16,14 +20,14 @@ import {
   AUTH_PAGE_TITLES,
 } from '@/shared/constants';
 
-export default async function ResetPasswordPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ email?: string }>;
-}) {
-  const resolvedSearchParams = await searchParams;
-  const email = resolvedSearchParams.email;
+function ResetPasswordPageContent() {
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? undefined;
 
+  return <ResetPasswordPageLayout email={email} />;
+}
+
+function ResetPasswordPageLayout({ email }: { email?: string }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6 lg:px-8">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,#fde68a_0%,transparent_38%),radial-gradient(circle_at_bottom,#a7f3d0_0%,transparent_40%)] dark:bg-[radial-gradient(circle_at_top,#854d0e_0%,transparent_45%),radial-gradient(circle_at_bottom,#064e3b_0%,transparent_40%)]" />
@@ -55,5 +59,13 @@ export default async function ResetPasswordPage({
         </Card>
       </motion.div>
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordPageLayout />}>
+      <ResetPasswordPageContent />
+    </Suspense>
   );
 }

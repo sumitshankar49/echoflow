@@ -1,7 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
 import { ActiveCirclesCard } from "./dashboard-overview/components/active-circles-card";
 import { DashboardHeroSection } from "./dashboard-overview/components/dashboard-hero-section";
 import { FocusPlanCard } from "./dashboard-overview/components/focus-plan-card";
@@ -12,8 +10,6 @@ import { SmartSuggestionsCard } from "./dashboard-overview/components/smart-sugg
 import { UpcomingRemindersCard } from "./dashboard-overview/components/upcoming-reminders-card";
 import { useDashboardOverviewData } from "./dashboard-overview/hooks/use-dashboard-overview-data";
 import { useDashboardPlayer } from "./dashboard-overview/hooks/use-dashboard-player";
-
-const ReactPlayer = dynamic(() => import("react-player"), { ssr: false });
 
 export function DashboardOverview() {
   const {
@@ -30,7 +26,9 @@ export function DashboardOverview() {
   } = useDashboardOverviewData();
 
   const {
+    playlistName,
     activeTrackUrl,
+    activeTrackTitle,
     trackIndex,
     hasTracks,
     isPlaying,
@@ -38,9 +36,8 @@ export function DashboardOverview() {
     safeDuration,
     remainingSeconds,
     musicProgress,
-    setIsPlaying,
-    setElapsedSeconds,
-    setDurationSeconds,
+    togglePlayback,
+    closePlayback,
     goToPreviousTrack,
     goToNextTrack,
   } = useDashboardPlayer(quickPlayerPlaylist);
@@ -76,7 +73,9 @@ export function DashboardOverview() {
 
         <MusicQuickPlayerCard
           quickPlayerPlaylist={quickPlayerPlaylist}
+          playlistName={playlistName}
           activeTrackUrl={activeTrackUrl}
+          activeTrackTitle={activeTrackTitle}
           trackIndex={trackIndex}
           hasTracks={hasTracks}
           isPlaying={isPlaying}
@@ -84,12 +83,10 @@ export function DashboardOverview() {
           safeDuration={safeDuration}
           remainingSeconds={remainingSeconds}
           musicProgress={musicProgress}
-          setIsPlaying={setIsPlaying}
-          setElapsedSeconds={setElapsedSeconds}
-          setDurationSeconds={setDurationSeconds}
+          togglePlayback={togglePlayback}
+          closePlayback={closePlayback}
           goToPreviousTrack={goToPreviousTrack}
           goToNextTrack={goToNextTrack}
-          ReactPlayer={ReactPlayer}
         />
 
         <SmartSuggestionsCard smartSuggestions={smartSuggestions} />

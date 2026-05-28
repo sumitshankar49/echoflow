@@ -1,65 +1,52 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import type { PlaylistTrack } from '../domain/music.utils';
+import { useMusicPlayerStore } from '@/shared/store/music-player.store';
 
 export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [durationSeconds, setDurationSeconds] = useState(0);
-  const lastProgressEventAtRef = useRef<number>(Date.now());
+  const queueSignature = useMemo(
+    () => tracks.map((track) => track.url).join('||'),
+    [tracks],
+  );
 
-  useEffect(() => {
-    if (!tracks.length) {
-      setActiveIndex(0);
-      setIsPlaying(false);
-      setElapsedSeconds(0);
-      return;
-    }
+  const storeQueueSignature = useMusicPlayerStore((state) => state.queueSignature);
+  const storeTracks = useMusicPlayerStore((state) => state.tracks);
+  const storeActiveIndex = useMusicPlayerStore((state) => state.activeIndex);
+  const storeIsPlaying = useMusicPlayerStore((state) => state.isPlaying);
+  const storeElapsedSeconds = useMusicPlayerStore((state) => state.elapsedSeconds);
+  const storeDurationSeconds = useMusicPlayerStore((state) => state.durationSeconds);
 
-    if (activeIndex > tracks.length - 1) {
-      setActiveIndex(0);
-    }
-  }, [activeIndex, tracks]);
+  const loadQueue = useMusicPlayerStore((state) => state.loadQueue);
+  const setPlaying = useMusicPlayerStore((state) => state.setPlaying);
+  const togglePlayback = useMusicPlayerStore((state) => state.togglePlayback);
+  const setElapsedSeconds = useMusicPlayerStore((state) => state.setElapsedSeconds);
+  const setDurationSeconds = useMusicPlayerStore((state) => state.setDurationSeconds);
+  const previousTrack = useMusicPlayerStore((state) => state.previousTrack);
+  const nextTrack = useMusicPlayerStore((state) => state.nextTrack);
+  const onTrackEnded = useMusicPlayerStore((state) => state.onTrackEnded);
 
-  useEffect(() => {
-    setElapsedSeconds(0);
-    setDurationSeconds(0);
-    lastProgressEventAtRef.current = Date.now();
-  }, [activeIndex, tracks]);
+  const isCurrentQueue = queueSignature.length > 0 && storeQueueSignature === queueSignature;
+  const activeIndex = isCurrentQueue ? storeActiveIndex : 0;
+  const activeTrack = isCurrentQueue ? storeTracks[storeActiveIndex] : null;
+  const isPlaying = isCurrentQueue ? storeIsPlaying : false;
+  const elapsedSeconds = isCurrentQueue ? storeElapsedSeconds : 0;
 
-  const activeTrack = tracks[activeIndex];
   const effectiveDurationSeconds = useMemo(() => {
-    const mediaDuration = Number.isFinite(durationSeconds) ? durationSeconds : 0;
+    const mediaDuration = isCurrentQueue && Number.isFinite(storeDurationSeconds)
+      ? storeDurationSeconds
+      : 0;
     if (mediaDuration > 0) {
       return mediaDuration;
     }
 
     return activeTrack?.durationSeconds ?? 0;
-  }, [activeTrack?.durationSeconds, durationSeconds]);
+  }, [activeTrack?.durationSeconds, isCurrentQueue, storeDurationSeconds]);
 
   const progress =
     effectiveDurationSeconds > 0
       ? Math.min((elapsedSeconds / effectiveDurationSeconds) * 100, 100)
       : 0;
-
-  useEffect(() => {
-    if (!isPlaying || !activeTrack) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      const recentlyUpdatedByMedia = Date.now() - lastProgressEventAtRef.current < 1600;
-      if (recentlyUpdatedByMedia) {
-        return;
-      }
-
-      setElapsedSeconds((current) => current + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, [activeTrack, isPlaying]);
 
   return {
     activeIndex,
@@ -73,36 +60,47 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
         return;
       }
 
-      setActiveIndex(index);
-      setElapsedSeconds(0);
-      setIsPlaying(true);
+      loadQueue({
+        playlistName: 'FocusFlow Playlist',
+        tracks,
+        startIndex: index,
+        autoplay: true,
+      });
     },
     onPlaybackStateChange: (playing: boolean) => {
-      setIsPlaying(playing);
+      if (!isCurrentQueue) {
+        return;
+      }
+
+      setPlaying(playing);
     },
     onProgressChange: (elapsed: number) => {
-      lastProgressEventAtRef.current = Date.now();
-      setElapsedSeconds(Math.max(0, Math.floor(elapsed)));
+      if (!isCurrentQueue) {
+        return;
+      }
+
+      setElapsedSeconds(elapsed);
     },
     onDurationChange: (duration: number) => {
-      if (!Number.isFinite(duration) || duration <= 0) {
+      if (!isCurrentQueue) {
         return;
       }
 
-      setDurationSeconds(Math.floor(duration));
+      setDurationSeconds(duration);
     },
     onTrackEnded: () => {
-      if (!tracks.length) {
+      if (!isCurrentQueue) {
         return;
       }
 
-      setIsPlaying(false);
-      if (durationSeconds > 0) {
-        setElapsedSeconds(durationSeconds);
-      }
+      onTrackEnded();
     },
     onPlaybackError: () => {
-      setIsPlaying(false);
+      if (!isCurrentQueue) {
+        return;
+      }
+
+      setPlaying(false);
       setElapsedSeconds(0);
     },
     togglePlayback: () => {
@@ -110,23 +108,51 @@ export function useFocusFlowPlayer(tracks: PlaylistTrack[]) {
         return;
       }
 
-      setIsPlaying((value) => !value);
+      if (!isCurrentQueue) {
+        loadQueue({
+          playlistName: 'FocusFlow Playlist',
+          tracks,
+          startIndex: 0,
+          autoplay: true,
+        });
+        return;
+      }
+
+      togglePlayback();
     },
     previousTrack: () => {
       if (!tracks.length) {
         return;
       }
 
-      setActiveIndex((value) => (value - 1 + tracks.length) % tracks.length);
-      setElapsedSeconds(0);
+      if (!isCurrentQueue) {
+        loadQueue({
+          playlistName: 'FocusFlow Playlist',
+          tracks,
+          startIndex: 0,
+          autoplay: true,
+        });
+        return;
+      }
+
+      previousTrack();
     },
     nextTrack: () => {
       if (!tracks.length) {
         return;
       }
 
-      setActiveIndex((value) => (value + 1) % tracks.length);
-      setElapsedSeconds(0);
+      if (!isCurrentQueue) {
+        loadQueue({
+          playlistName: 'FocusFlow Playlist',
+          tracks,
+          startIndex: 0,
+          autoplay: true,
+        });
+        return;
+      }
+
+      nextTrack();
     },
   };
 }

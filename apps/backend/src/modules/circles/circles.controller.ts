@@ -33,9 +33,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CirclesService } from './circles.service';
 import { CreateCircleDto } from './dto/create-circle.dto';
 import { InviteCircleMemberDto } from './dto/invite-circle-member.dto';
+import { ShareCircleNoteDto } from './dto/share-circle-note.dto';
 import { UpdateCircleDto } from './dto/update-circle.dto';
 import { CircleMember } from './entities/circle-member.entity';
 import { Circle } from './entities/circle.entity';
+import { CircleSharedNoteEntity } from './entities/circle-shared-note.entity';
 import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -191,5 +193,46 @@ export class CirclesController {
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<CircleMember | { message: string }> {
     return this.circlesService.inviteMember(id, inviteCircleMemberDto, currentUser);
+  }
+
+  @Get(':id/shared-notes')
+  @ApiOperation({ summary: 'Get real notes shared into a circle' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiOkResponse({ description: 'Shared notes fetched successfully', type: CircleSharedNoteEntity, isArray: true })
+  listSharedNotes(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<CircleSharedNoteEntity[]> {
+    return this.circlesService.listSharedNotes(id, currentUser);
+  }
+
+  @Post(':id/shared-notes')
+  @ApiOperation({ summary: 'Share one of your notes into a circle' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiBody({ type: ShareCircleNoteDto })
+  @ApiCreatedResponse({ description: 'Note shared successfully', type: CircleSharedNoteEntity })
+  shareNote(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() shareCircleNoteDto: ShareCircleNoteDto,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<CircleSharedNoteEntity> {
+    return this.circlesService.shareNote(id, shareCircleNoteDto, currentUser);
+  }
+
+  @Delete(':id/shared-notes/:noteId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove a shared note from a circle' })
+  @ApiParam({ name: 'id', description: 'Circle UUID' })
+  @ApiParam({ name: 'noteId', description: 'Note UUID' })
+  @ApiOkResponse({
+    description: 'Shared note removed successfully',
+    schema: { example: { message: 'Shared note removed successfully' } },
+  })
+  unshareNote(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('noteId', new ParseUUIDPipe()) noteId: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<{ message: string }> {
+    return this.circlesService.unshareNote(id, noteId, currentUser);
   }
 }

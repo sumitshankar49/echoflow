@@ -7,6 +7,8 @@ import type {
   UpdateCirclePayload,
   InviteMemberResponse,
   InviteMemberPayload,
+  CircleSharedNote,
+  ShareCircleNotePayload,
   PaginatedResponse,
 } from '../domain/circles.types';
 
@@ -47,6 +49,23 @@ function extractCircles(payload: CircleApiResponse[] | PaginatedResponse<CircleA
   return [];
 }
 
+function normalizeSharedNote(sharedNote: CircleSharedNote): CircleSharedNote {
+  return {
+    ...sharedNote,
+    note: {
+      ...sharedNote.note,
+      tags: sharedNote.note.tags ?? [],
+    },
+    sharedBy: sharedNote.sharedBy
+      ? {
+          id: sharedNote.sharedBy.id,
+          name: sharedNote.sharedBy.name,
+          email: sharedNote.sharedBy.email,
+        }
+      : undefined,
+  };
+}
+
 export const circlesService = {
   list: () =>
     apiClient
@@ -66,4 +85,10 @@ export const circlesService = {
   removeMember: (circleId: string, memberId: string) =>
     apiClient.delete(`/circles/${circleId}/members/${memberId}`).then((r) => r.data),
   leaveCircle: (id: string) => apiClient.post(`/circles/${id}/leave`).then((r) => r.data),
+  listSharedNotes: (id: string) =>
+    apiClient.get<CircleSharedNote[]>(`/circles/${id}/shared-notes`).then((r) => r.data.map(normalizeSharedNote)),
+  shareNote: (id: string, payload: ShareCircleNotePayload) =>
+    apiClient.post<CircleSharedNote>(`/circles/${id}/shared-notes`, payload).then((r) => normalizeSharedNote(r.data)),
+  unshareNote: (id: string, noteId: string) =>
+    apiClient.delete(`/circles/${id}/shared-notes/${noteId}`).then((r) => r.data),
 };

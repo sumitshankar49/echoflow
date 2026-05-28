@@ -36,11 +36,6 @@ function initials(name: string) {
   return values.slice(0, 2).map((value) => value[0]?.toUpperCase() ?? '').join('');
 }
 
-function fakeMemberNames(circleName: string) {
-  const base = circleName.split(/\s+/).filter(Boolean)[0] ?? 'Circle';
-  return [`${base} Ally`, `${base} Partner`, `${base} Buddy`];
-}
-
 export function CircleListView() {
   const { data: circles, isPending, isFetching, isError } = useCircleList();
   const [showEntryLoader, setShowEntryLoader] = useState(true);
@@ -60,7 +55,7 @@ export function CircleListView() {
   if (showLoading)
     return (
       <div className="space-y-6">
-        <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <motion.div
               key={index}
@@ -146,15 +141,15 @@ export function CircleListView() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {circleItems.map((circle, index) => {
               const members = circle.members?.filter((member) => member.status === 'accepted') ?? [];
               const invitees = circle.members?.filter((member) => member.status === 'invited') ?? [];
               const role = circle.ownerId === me?.id ? 'Owner' : 'Member';
-              const memberCount = Math.max(members.length, 1);
+              const memberCount = members.length;
               const avatarNames = members.length
                 ? members.map((member) => member.user?.name || `User ${member.userId.slice(0, 4)}`)
-                : fakeMemberNames(circle.name);
+                : [circle.name];
 
               return (
                 <motion.article
@@ -195,7 +190,7 @@ export function CircleListView() {
                       <div className="text-right text-xs text-muted-foreground">
                         <p className="inline-flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" />
-                          {memberCount} members
+                          {memberCount} member{memberCount === 1 ? '' : 's'}
                         </p>
                         {invitees.length ? <p className="mt-1">{invitees.length} pending invite(s)</p> : null}
                       </div>

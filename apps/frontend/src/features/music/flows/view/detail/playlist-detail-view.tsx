@@ -118,7 +118,7 @@ export function PlaylistDetailView({ id }: { id: string }) {
           <div className="flex flex-col justify-between gap-6">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/65">Mood lane</p>
-              <h2 className="mt-2 text-4xl font-semibold tracking-tight sm:text-5xl">{playlist.name}</h2>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">{playlist.name}</h2>
               <p className="mt-4 max-w-3xl text-base leading-7 text-white/68">
                 {stripMoodMetadata(playlist.description) || getPlaylistMood(playlist)}
               </p>

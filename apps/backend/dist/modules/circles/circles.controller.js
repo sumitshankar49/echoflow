@@ -20,9 +20,11 @@ const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const circles_service_1 = require("./circles.service");
 const create_circle_dto_1 = require("./dto/create-circle.dto");
 const invite_circle_member_dto_1 = require("./dto/invite-circle-member.dto");
+const share_circle_note_dto_1 = require("./dto/share-circle-note.dto");
 const update_circle_dto_1 = require("./dto/update-circle.dto");
 const circle_member_entity_1 = require("./entities/circle-member.entity");
 const circle_entity_1 = require("./entities/circle.entity");
+const circle_shared_note_entity_1 = require("./entities/circle-shared-note.entity");
 const pagination_query_dto_1 = require("../../common/dto/pagination-query.dto");
 let CirclesController = class CirclesController {
     constructor(circlesService) {
@@ -57,6 +59,15 @@ let CirclesController = class CirclesController {
     }
     inviteMember(id, inviteCircleMemberDto, currentUser) {
         return this.circlesService.inviteMember(id, inviteCircleMemberDto, currentUser);
+    }
+    listSharedNotes(id, currentUser) {
+        return this.circlesService.listSharedNotes(id, currentUser);
+    }
+    shareNote(id, shareCircleNoteDto, currentUser) {
+        return this.circlesService.shareNote(id, shareCircleNoteDto, currentUser);
+    }
+    unshareNote(id, noteId, currentUser) {
+        return this.circlesService.unshareNote(id, noteId, currentUser);
     }
 };
 exports.CirclesController = CirclesController;
@@ -205,6 +216,47 @@ __decorate([
     __metadata("design:paramtypes", [String, invite_circle_member_dto_1.InviteCircleMemberDto, Object]),
     __metadata("design:returntype", Promise)
 ], CirclesController.prototype, "inviteMember", null);
+__decorate([
+    (0, common_1.Get)(':id/shared-notes'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get real notes shared into a circle' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Circle UUID' }),
+    (0, swagger_1.ApiOkResponse)({ description: 'Shared notes fetched successfully', type: circle_shared_note_entity_1.CircleSharedNoteEntity, isArray: true }),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], CirclesController.prototype, "listSharedNotes", null);
+__decorate([
+    (0, common_1.Post)(':id/shared-notes'),
+    (0, swagger_1.ApiOperation)({ summary: 'Share one of your notes into a circle' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Circle UUID' }),
+    (0, swagger_1.ApiBody)({ type: share_circle_note_dto_1.ShareCircleNoteDto }),
+    (0, swagger_1.ApiCreatedResponse)({ description: 'Note shared successfully', type: circle_shared_note_entity_1.CircleSharedNoteEntity }),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, share_circle_note_dto_1.ShareCircleNoteDto, Object]),
+    __metadata("design:returntype", Promise)
+], CirclesController.prototype, "shareNote", null);
+__decorate([
+    (0, common_1.Delete)(':id/shared-notes/:noteId'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a shared note from a circle' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Circle UUID' }),
+    (0, swagger_1.ApiParam)({ name: 'noteId', description: 'Note UUID' }),
+    (0, swagger_1.ApiOkResponse)({
+        description: 'Shared note removed successfully',
+        schema: { example: { message: 'Shared note removed successfully' } },
+    }),
+    __param(0, (0, common_1.Param)('id', new common_1.ParseUUIDPipe())),
+    __param(1, (0, common_1.Param)('noteId', new common_1.ParseUUIDPipe())),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, Object]),
+    __metadata("design:returntype", Promise)
+], CirclesController.prototype, "unshareNote", null);
 exports.CirclesController = CirclesController = __decorate([
     (0, swagger_1.ApiTags)('Circles'),
     (0, swagger_1.ApiBearerAuth)('access-token'),

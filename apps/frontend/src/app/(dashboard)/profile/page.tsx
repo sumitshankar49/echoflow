@@ -55,6 +55,7 @@ import { notesQueryKeys } from "@/features/notes/shared/data/notes.query-keys";
 import { remindersService } from "@/features/reminders/shared/data/reminders.service";
 import { usersService } from "@/features/users/shared/data/users.service";
 import { usersQueryKeys } from "@/features/users/shared/data/users.query-keys";
+import { ColorPalettePicker } from "@/shared/theme/ui/color-palette-picker";
 import { runConfettiBurst } from "@/shared/utils/confetti";
 
 const GENDER_OPTIONS = [
@@ -76,7 +77,7 @@ const RELATIONSHIP_OPTIONS = [
 const floatingOrbs = [
   { top: "8%", left: "12%", size: 180, color: "bg-violet-500/20", duration: 20, delay: 0 },
   { top: "62%", left: "78%", size: 220, color: "bg-cyan-400/18", duration: 24, delay: 1.2 },
-  { top: "30%", left: "68%", size: 140, color: "bg-indigo-500/20", duration: 18, delay: 0.4 },
+  { top: "30%", left: "68%", size: 140, color: "bg-primary/20", duration: 18, delay: 0.4 },
   { top: "76%", left: "20%", size: 120, color: "bg-sky-400/16", duration: 22, delay: 0.9 },
 ];
 
@@ -351,7 +352,7 @@ export default function ProfilePage() {
   const pageLoading = profilePending || notesPending || remindersPending;
 
   return (
-    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-hidden">
+    <div className="relative min-h-[calc(100vh-5rem)] w-full overflow-x-clip">
       <div className="pointer-events-none absolute inset-0 -z-30 bg-[radial-gradient(circle_at_20%_10%,rgba(139,92,246,0.3),transparent_36%),radial-gradient(circle_at_80%_0%,rgba(99,102,241,0.26),transparent_38%),radial-gradient(circle_at_52%_88%,rgba(34,211,238,0.24),transparent_42%)]" />
       <div className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:42px_42px] opacity-30" />
 
@@ -386,7 +387,7 @@ export default function ProfilePage() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45 }}
-              className="relative overflow-hidden rounded-2xl border border-indigo-400/25 bg-[linear-gradient(145deg,rgba(20,26,73,0.94),rgba(20,34,92,0.9),rgba(14,28,76,0.94))] p-5 shadow-[0_28px_90px_-44px_rgba(79,70,229,0.7)] backdrop-blur-2xl sm:p-6"
+              className="relative overflow-hidden rounded-2xl border border-border/50 bg-[linear-gradient(145deg,rgba(20,26,73,0.94),rgba(20,34,92,0.9),rgba(14,28,76,0.94))] p-5 shadow-[0_28px_90px_-44px_rgba(79,70,229,0.7)] backdrop-blur-2xl sm:p-6"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_10%,rgba(139,92,246,0.22),transparent_35%),radial-gradient(circle_at_85%_28%,rgba(34,211,238,0.18),transparent_30%)]" />
               <div className="pointer-events-none absolute -right-20 top-6 h-44 w-80 rounded-full bg-gradient-to-r from-cyan-300/20 to-violet-400/20 blur-2xl" />
@@ -394,14 +395,14 @@ export default function ProfilePage() {
               <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="grid gap-5 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
                   <label className="group relative mx-auto block h-32 w-32 cursor-pointer md:mx-0">
-                    <Avatar className="h-32 w-32 ring-4 ring-indigo-400/70 shadow-xl shadow-indigo-500/35">
+                    <Avatar className="h-32 w-32 ring-4 ring-primary/70 shadow-xl shadow-primary/35">
                       <AvatarImage src={avatarDataUrl || undefined} alt={me?.name || "User"} />
                       <AvatarFallback className="text-2xl">{getInitials(me?.name || "")}</AvatarFallback>
                     </Avatar>
                     <span className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-950/0 text-white opacity-0 transition-all group-hover:bg-slate-950/50 group-hover:opacity-100">
                       <Camera className="h-6 w-6" />
                     </span>
-                    <span className="absolute -bottom-1 -right-1 rounded-full bg-indigo-500 p-2 shadow-lg shadow-indigo-500/45">
+                    <span className="absolute -bottom-1 -right-1 rounded-full bg-primary p-2 shadow-lg shadow-primary/45">
                       <Camera className="h-3.5 w-3.5 text-white" />
                     </span>
                     <input type="file" accept="image/*" onChange={onAvatarChange} className="hidden" />
@@ -415,14 +416,14 @@ export default function ProfilePage() {
                           <Sparkles className="h-3 w-3 text-white" />
                         </span>
                       </h1>
-                      <p className="text-sm text-indigo-100/85">{me?.email}</p>
+                      <p className="text-sm text-muted-foreground">{me?.email}</p>
                     </div>
 
                     <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                      <Badge className="rounded-md border-0 bg-indigo-500/35 px-2.5 py-1 text-xs text-indigo-100">
+                      <Badge className="rounded-md border-0 bg-primary/30 px-2.5 py-1 text-xs text-primary-foreground">
                         Pro Member
                       </Badge>
-                      <span className="inline-flex items-center gap-2 text-sm text-indigo-100/95">
+                      <span className="inline-flex items-center gap-2 text-sm text-foreground">
                         <span className="h-2 w-2 rounded-full bg-emerald-400" />
                         Online
                       </span>
@@ -432,7 +433,7 @@ export default function ProfilePage() {
 
               </div>
 
-              <div className="relative mt-6 grid gap-3 border-t border-indigo-200/15 pt-5 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="relative mt-6 grid gap-3 border-t border-border/50 pt-5 sm:grid-cols-2 xl:grid-cols-4">
                 {statsView.map((item, index) => (
                   <motion.div
                     key={item.label}
@@ -446,7 +447,7 @@ export default function ProfilePage() {
                     </span>
                     <div>
                       <p className="text-3xl font-semibold leading-none text-white">{item.value}</p>
-                      <p className="mt-1 text-xs text-indigo-100/80">{item.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{item.label}</p>
                       <p className="mt-1 inline-flex items-center gap-1 text-xs text-emerald-300/90">
                         <Flame className="h-3 w-3" />
                         {item.sub}
@@ -459,12 +460,12 @@ export default function ProfilePage() {
 
             <section className="grid gap-4 xl:grid-cols-2">
               <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                <Card className="rounded-2xl border-indigo-300/25 bg-[linear-gradient(145deg,rgba(20,26,73,0.86),rgba(20,34,92,0.82),rgba(14,28,76,0.88))] shadow-[0_24px_70px_-40px_rgba(2,132,199,0.6)] backdrop-blur-xl">
+                <Card className="rounded-2xl border-border/40 bg-[linear-gradient(145deg,rgba(20,26,73,0.86),rgba(20,34,92,0.82),rgba(14,28,76,0.88))] shadow-[0_24px_70px_-40px_rgba(2,132,199,0.6)] backdrop-blur-xl">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <CardTitle className="text-2xl text-white">Profile Information</CardTitle>
-                        <CardDescription className="text-indigo-100/70">Update your personal details</CardDescription>
+                        <CardDescription className="text-muted-foreground">Update your personal details</CardDescription>
                       </div>
                       <span className="inline-flex items-center gap-1 text-sm text-emerald-300">
                         <CheckCircle2 className="h-4 w-4" />
@@ -474,54 +475,54 @@ export default function ProfilePage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="text-indigo-100">Full Name</Label>
+                      <Label className="text-foreground">Full Name</Label>
                       <div className="relative">
                         <User className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                         <Input
                           value={name}
                           onChange={(event) => setName(event.target.value)}
                           placeholder="Your full name"
-                          className="h-11 border-indigo-200/30 bg-white/95 pl-10 text-slate-900 placeholder:text-slate-400"
+                          className="h-11 border-border bg-background pl-10 text-foreground placeholder:text-muted-foreground"
                         />
                       </div>
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label className="text-indigo-100">Date of Birth</Label>
+                        <Label className="text-foreground">Date of Birth</Label>
                         <div className="relative">
                           <CalendarDays className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                           <Input
                             type="date"
                             value={dob}
                             onChange={(event) => setDob(event.target.value)}
-                            className="h-11 border-indigo-200/30 bg-white/95 pl-10 text-slate-900"
+                            className="h-11 border-border bg-background pl-10 text-foreground "
                           />
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-indigo-100">Mobile Number</Label>
+                        <Label className="text-foreground">Mobile Number</Label>
                         <div className="relative">
                           <Phone className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
                           <Input
                             value={mobileNumber}
                             onChange={(event) => setMobileNumber(event.target.value)}
                             placeholder="+91 98765 43210"
-                            className="h-11 border-indigo-200/30 bg-white/95 pl-10 text-slate-900 placeholder:text-slate-400"
+                            className="h-11 border-border bg-background pl-10 text-foreground placeholder:text-muted-foreground"
                           />
                         </div>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-indigo-100">Bio</Label>
+                      <Label className="text-foreground">Bio</Label>
                       <div className="relative">
                         <Textarea
                           value={bio}
                           maxLength={160}
                           onChange={(event) => setBio(event.target.value)}
                           placeholder="Share what drives you and how you use EchoFlow..."
-                          className="min-h-24 border-indigo-200/30 bg-white/95 pr-14 text-slate-900 placeholder:text-slate-400"
+                          className="min-h-24 border-border bg-background pr-14 text-foreground placeholder:text-muted-foreground"
                         />
                         <span className="absolute bottom-2 right-3 text-xs text-slate-500">{bio.length}/160</span>
                       </div>
@@ -529,9 +530,9 @@ export default function ProfilePage() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label className="text-indigo-100">Gender</Label>
-                        <Select value={gender || undefined} onValueChange={(value) => setGender(value as Gender)}>
-                          <SelectTrigger className="h-11 border-indigo-200/30 bg-white/95 text-slate-900">
+                        <Label className="text-foreground">Gender</Label>
+                        <Select value={gender} onValueChange={(value) => setGender(value as Gender)}>
+                          <SelectTrigger className="h-11 border-border bg-background text-foreground">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                           <SelectContent>
@@ -544,12 +545,12 @@ export default function ProfilePage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-indigo-100">Relationship Status</Label>
+                        <Label className="text-foreground">Relationship Status</Label>
                         <Select
-                          value={relationshipStatus || undefined}
+                          value={relationshipStatus}
                           onValueChange={(value) => setRelationshipStatus(value as RelationshipStatus)}
                         >
-                          <SelectTrigger className="h-11 border-indigo-200/30 bg-white/95 text-slate-900">
+                          <SelectTrigger className="h-11 border-border bg-background text-foreground">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
@@ -567,7 +568,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={onSaveProfile}
                         disabled={updateProfileMutation.isPending}
-                        className="h-11 min-w-48 bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-lg shadow-indigo-500/35 hover:from-violet-400 hover:to-indigo-400"
+                        className="h-11 w-full bg-primary text-primary-foreground shadow-lg shadow-primary/35 hover:bg-primary/90 sm:w-auto sm:min-w-48"
                       >
                         {updateProfileMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save Changes
@@ -575,7 +576,7 @@ export default function ProfilePage() {
                       <Button
                         variant="ghost"
                         onClick={onResetProfile}
-                        className="h-11 min-w-40 text-indigo-100 hover:bg-white/10 hover:text-white"
+                        className="h-11 w-full text-foreground hover:bg-accent hover:text-accent-foreground sm:w-auto sm:min-w-40"
                       >
                         Reset Changes
                       </Button>
@@ -585,27 +586,27 @@ export default function ProfilePage() {
               </motion.div>
 
               <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.34, delay: 0.05 }}>
-                <Card className="h-full rounded-2xl border-indigo-300/25 bg-[linear-gradient(145deg,rgba(20,26,73,0.86),rgba(20,34,92,0.82),rgba(14,28,76,0.88))] shadow-[0_24px_70px_-40px_rgba(79,70,229,0.65)] backdrop-blur-xl">
+                <Card className="h-full rounded-2xl border-border/40 bg-card/80 shadow-[0_24px_70px_-40px_rgba(15,23,42,0.45)] backdrop-blur-xl">
                   <CardHeader className="pb-4">
-                    <CardTitle className="text-2xl text-white">Settings & Preferences</CardTitle>
-                    <CardDescription className="text-indigo-100/70">Customize your experience</CardDescription>
+                    <CardTitle className="text-2xl text-foreground">Settings & Preferences</CardTitle>
+                    <CardDescription className="text-muted-foreground">Customize your experience</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-5">
-                    <div className="rounded-xl border border-indigo-200/20 bg-white/6 p-4">
+                    <div className="rounded-xl border border-border/60 bg-background/70 p-4">
                       <div className="mb-3 flex items-start gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-cyan-400/14">
-                          <Palette className="h-4 w-4 text-cyan-300" />
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+                          <Palette className="h-4 w-4 text-primary" />
                         </span>
                         <div>
-                          <p className="font-medium text-white">Appearance</p>
-                          <p className="text-sm text-indigo-100/70">Choose your preferred theme</p>
+                          <p className="font-medium text-foreground">Appearance</p>
+                          <p className="text-sm text-muted-foreground">Choose your preferred theme</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                         <Button
                           variant="outline"
                           onClick={() => setTheme("light")}
-                          className={`h-9 border-indigo-200/30 text-indigo-100 hover:bg-white/10 ${theme === "light" ? "bg-indigo-500/55 text-white" : "bg-white/5"}`}
+                          className={`h-9 border-border text-foreground hover:bg-accent hover:text-accent-foreground ${theme === "light" ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-background/40"}`}
                         >
                           <Sun className="h-3.5 w-3.5" />
                           Light
@@ -613,7 +614,7 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => setTheme("dark")}
-                          className={`h-9 border-indigo-200/30 text-indigo-100 hover:bg-white/10 ${theme === "dark" ? "bg-indigo-500/55 text-white" : "bg-white/5"}`}
+                          className={`h-9 border-border text-foreground hover:bg-accent hover:text-accent-foreground ${theme === "dark" ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-background/40"}`}
                         >
                           <MoonStar className="h-3.5 w-3.5" />
                           Dark
@@ -621,56 +622,58 @@ export default function ProfilePage() {
                         <Button
                           variant="outline"
                           onClick={() => setTheme("system")}
-                          className={`h-9 border-indigo-200/30 text-indigo-100 hover:bg-white/10 ${theme === "system" ? "bg-indigo-500/55 text-white" : "bg-white/5"}`}
+                          className={`h-9 border-border text-foreground hover:bg-accent hover:text-accent-foreground ${theme === "system" ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-background/40"}`}
                         >
                           <Sparkles className="h-3.5 w-3.5" />
                           System
                         </Button>
                       </div>
+
+                      <ColorPalettePicker />
                     </div>
 
-                    <div className="rounded-xl border border-indigo-200/20 bg-white/6 p-4">
+                    <div className="rounded-xl border border-border/60 bg-background/70 p-4">
                       <div className="mb-3 flex items-start gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-indigo-400/14">
-                          <Clock3 className="h-4 w-4 text-indigo-200" />
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+                          <Clock3 className="h-4 w-4 text-primary" />
                         </span>
                         <div>
-                          <p className="font-medium text-white">Clock Preference</p>
-                          <p className="text-sm text-indigo-100/70">Choose your time format</p>
+                          <p className="font-medium text-foreground">Clock Preference</p>
+                          <p className="text-sm text-muted-foreground">Choose your time format</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
                           onClick={() => setClockPref("12h")}
-                          className={`h-9 border-indigo-200/30 text-indigo-100 hover:bg-white/10 ${clockPref === "12h" ? "bg-indigo-500/55 text-white" : "bg-white/5"}`}
+                          className={`h-9 border-border text-foreground hover:bg-accent hover:text-accent-foreground ${clockPref === "12h" ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-background/40"}`}
                         >
                           12 Hour
                         </Button>
                         <Button
                           variant="outline"
                           onClick={() => setClockPref("24h")}
-                          className={`h-9 border-indigo-200/30 text-indigo-100 hover:bg-white/10 ${clockPref === "24h" ? "bg-indigo-500/55 text-white" : "bg-white/5"}`}
+                          className={`h-9 border-border text-foreground hover:bg-accent hover:text-accent-foreground ${clockPref === "24h" ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground" : "bg-background/40"}`}
                         >
                           24 Hour
                         </Button>
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-indigo-200/20 bg-white/6 p-4">
+                    <div className="rounded-xl border border-border/60 bg-background/70 p-4">
                       <div className="mb-3 flex items-start gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-400/14">
-                          <Settings2 className="h-4 w-4 text-rose-200" />
+                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+                          <Settings2 className="h-4 w-4 text-primary" />
                         </span>
                         <div>
-                          <p className="font-medium text-white">Account Security</p>
-                          <p className="text-sm text-indigo-100/70">Keep your account safe</p>
+                          <p className="font-medium text-foreground">Account Security</p>
+                          <p className="text-sm text-muted-foreground">Keep your account safe</p>
                         </div>
                       </div>
 
                       <Button
                         variant="outline"
-                        className="w-full justify-between border-indigo-200/20 bg-white/5 text-indigo-100 hover:bg-white/10"
+                        className="w-full justify-between border-border bg-background/40 text-foreground hover:bg-accent hover:text-accent-foreground"
                         onClick={() => setIsSecurityOpen((value) => !value)}
                       >
                         <span className="inline-flex items-center gap-2">
@@ -687,19 +690,19 @@ export default function ProfilePage() {
                             value={newPassword}
                             onChange={(event) => setNewPassword(event.target.value)}
                             placeholder="New password"
-                            className="h-10 border-indigo-200/30 bg-white/95 text-slate-900 placeholder:text-slate-400 dark:bg-slate-950/65 dark:text-slate-100 dark:placeholder:text-slate-400"
+                            className="h-10 border-border bg-background text-foreground placeholder:text-muted-foreground"
                           />
                           <Input
                             type="password"
                             value={confirmPassword}
                             onChange={(event) => setConfirmPassword(event.target.value)}
                             placeholder="Confirm new password"
-                            className="h-10 border-indigo-200/30 bg-white/95 text-slate-900 placeholder:text-slate-400 dark:bg-slate-950/65 dark:text-slate-100 dark:placeholder:text-slate-400"
+                            className="h-10 border-border bg-background text-foreground placeholder:text-muted-foreground"
                           />
                           <div className="flex justify-end">
                             <Link
                               href="/forgot-password"
-                              className="text-xs font-medium text-cyan-200 underline-offset-4 transition-colors hover:text-cyan-100 hover:underline"
+                              className="text-xs font-medium text-primary underline-offset-4 transition-colors hover:text-primary/90 hover:underline"
                             >
                               Forgot password?
                             </Link>
@@ -707,7 +710,7 @@ export default function ProfilePage() {
                           <Button
                             onClick={onChangePassword}
                             disabled={changePasswordMutation.isPending}
-                            className="w-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
                           >
                             {changePasswordMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
                             {changePasswordMutation.isPending ? "Updating..." : "Update Password"}

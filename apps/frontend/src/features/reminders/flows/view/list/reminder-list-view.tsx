@@ -433,7 +433,7 @@ function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
           type="date"
           value={from}
           onChange={(e) => onChange(e.target.value, to)}
-          className="h-8 w-36 cursor-pointer text-xs"
+          className="h-8 w-full cursor-pointer text-xs sm:w-36"
         />
       </div>
       <div className="flex items-center gap-1.5">
@@ -446,7 +446,7 @@ function DateRangePicker({ from, to, onChange }: DateRangePickerProps) {
           value={to}
           min={from || undefined}
           onChange={(e) => onChange(from, e.target.value)}
-          className="h-8 w-36 cursor-pointer text-xs"
+          className="h-8 w-full cursor-pointer text-xs sm:w-36"
         />
       </div>
       {(from || to) && (
@@ -626,7 +626,7 @@ export function ReminderListView() {
             </TabsList>
           </Tabs>
 
-          <div className="ml-auto">
+          <div className="w-full sm:ml-auto sm:w-auto">
             <DateRangePicker
               from={fromDate}
               to={toDate}
@@ -718,13 +718,13 @@ export function ReminderListView() {
       </div>
 
       {/* FAB */}
-      <div className="fixed bottom-8 right-8 z-30">
+      <div className="fixed bottom-4 right-4 z-30 sm:bottom-6 sm:right-6">
         <div className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
         <Button
           type="button"
           size="icon"
           onClick={openCreate}
-          className="relative h-14 w-14 rounded-full shadow-lg"
+          className="relative h-12 w-12 rounded-full shadow-lg sm:h-14 sm:w-14"
           title="Create reminder"
         >
           <Plus className="h-6 w-6" />

@@ -34,15 +34,17 @@ export function ConfirmActionDialog({
 }: ConfirmActionDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>{cancelLabel}</AlertDialogCancel>
+        <AlertDialogFooter className="gap-3">
+          <AlertDialogCancel className="w-full sm:w-auto" disabled={isLoading}>
+            {cancelLabel}
+          </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className="w-full bg-destructive text-destructive-foreground hover:bg-destructive/90 sm:w-auto"
             disabled={isLoading}
             onClick={(event) => {
               event.preventDefault();
