@@ -42,9 +42,10 @@ export function useDashboardOverviewData(): DashboardDataState {
   const favoritePlaylist = favoritePlaylistIds
     .map((favoriteId) => playlists.find((playlist) => playlist.id === favoriteId))
     .find((playlist) => playlist !== undefined);
+  const quickPlayerPlaylistOverride = favoritePlaylistIds.length > 0 ? favoritePlaylist ?? null : null;
 
   return {
-    ...createDashboardOverviewViewModel(overview, favoritePlaylist),
+    ...createDashboardOverviewViewModel(overview, quickPlayerPlaylistOverride),
     isOverviewPending,
   };
 }

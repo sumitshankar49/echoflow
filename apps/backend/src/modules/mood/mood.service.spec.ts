@@ -8,6 +8,7 @@ import { MoodService } from './mood.service';
 
 describe('MoodService', () => {
   let service: MoodService;
+  const fixedNow = new Date('2026-05-26T12:00:00.000Z');
 
   const prismaMock = {
     mood: {
@@ -25,6 +26,8 @@ describe('MoodService', () => {
 
   beforeEach(async () => {
     jest.resetAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(fixedNow);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +40,10 @@ describe('MoodService', () => {
     }).compile();
 
     service = module.get<MoodService>(MoodService);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('returns current mood and a 7-day trend', async () => {
