@@ -3,11 +3,29 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../generated/prisma/client';
 
+const TLS_QUERY_PARAM_PREFIXES = ['ssl', 'tls'];
+
+const hasTlsQueryParams = (parsedUrl: URL): boolean => {
+  for (const [key] of parsedUrl.searchParams.entries()) {
+    const lowerKey = key.toLowerCase();
+    if (TLS_QUERY_PARAM_PREFIXES.some((prefix) => lowerKey.startsWith(prefix))) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export const buildMariaDbPoolConfig = (databaseUrl: string): string | Record<string, unknown> => {
   try {
     const parsedUrl = new URL(databaseUrl);
 
     if (!['mysql:', 'mariadb:'].includes(parsedUrl.protocol)) {
+      return databaseUrl;
+    }
+
+    // Preserve URL-based TLS options (ssl*, tls*) used in managed production databases.
+    if (hasTlsQueryParams(parsedUrl)) {
       return databaseUrl;
     }
 

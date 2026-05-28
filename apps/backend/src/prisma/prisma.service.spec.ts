@@ -40,4 +40,11 @@ describe('buildMariaDbPoolConfig', () => {
 
     expect(buildMariaDbPoolConfig(url)).toBe(url);
   });
+
+  it('returns original url when TLS query params are present', () => {
+    const url =
+      'mysql://user:password@db.example.com:3306/echoflow?sslaccept=strict&ssl=true&connection_limit=30';
+
+    expect(buildMariaDbPoolConfig(url)).toBe(url);
+  });
 });
