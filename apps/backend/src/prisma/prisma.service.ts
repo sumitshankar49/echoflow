@@ -3,17 +3,37 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../generated/prisma/client';
 
-const TLS_QUERY_PARAM_PREFIXES = ['ssl', 'tls'];
+/**
+ * Maps SSL/TLS URL query params to a mariadb pool ssl option.
+ *
+ * - `sslaccept=strict` or `ssl=strict` → verify server cert using OS CAs
+ * - `ssl=true` / `ssl=1` / `tls=true`  → SSL enabled, cert validation relaxed
+ * - `ssl=false` / `ssl=0` / `ssl=none` → SSL explicitly disabled (no ssl key added)
+ * - absent                              → undefined (no ssl key added)
+ */
+const buildSslConfig = (
+  parsedUrl: URL,
+): Record<string, unknown> | boolean | undefined => {
+  const ssl = parsedUrl.searchParams.get('ssl')?.toLowerCase();
+  const sslaccept = parsedUrl.searchParams.get('sslaccept')?.toLowerCase();
+  const tls = parsedUrl.searchParams.get('tls')?.toLowerCase();
 
-const hasTlsQueryParams = (parsedUrl: URL): boolean => {
-  for (const [key] of parsedUrl.searchParams.entries()) {
-    const lowerKey = key.toLowerCase();
-    if (TLS_QUERY_PARAM_PREFIXES.some((prefix) => lowerKey.startsWith(prefix))) {
-      return true;
-    }
+  const disabled = new Set(['false', '0', 'none', 'disabled']);
+  if ((ssl && disabled.has(ssl)) || (tls && disabled.has(tls))) {
+    return undefined;
   }
 
-  return false;
+  if (sslaccept === 'strict' || ssl === 'strict') {
+    // Verify server certificate using OS certificate store.
+    return true;
+  }
+
+  if (ssl || tls || sslaccept) {
+    // SSL required but certificate validation is relaxed (e.g. self-signed certs).
+    return { rejectUnauthorized: false };
+  }
+
+  return undefined;
 };
 
 export const buildMariaDbPoolConfig = (databaseUrl: string): string | Record<string, unknown> => {
@@ -24,16 +44,11 @@ export const buildMariaDbPoolConfig = (databaseUrl: string): string | Record<str
       return databaseUrl;
     }
 
-    // Preserve URL-based TLS options (ssl*, tls*) used in managed production databases.
-    if (hasTlsQueryParams(parsedUrl)) {
-      return databaseUrl;
-    }
-
     const connectionLimit = Number(parsedUrl.searchParams.get('connection_limit') ?? '20');
     const poolTimeoutMs = Number(parsedUrl.searchParams.get('pool_timeout') ?? '30') * 1000;
     const connectTimeoutMs = Number(parsedUrl.searchParams.get('connect_timeout') ?? '30') * 1000;
 
-    return {
+    const config: Record<string, unknown> = {
       host: parsedUrl.hostname || '127.0.0.1',
       port: Number(parsedUrl.port || '3306'),
       user: decodeURIComponent(parsedUrl.username),
@@ -44,6 +59,12 @@ export const buildMariaDbPoolConfig = (databaseUrl: string): string | Record<str
       connectTimeout: Number.isFinite(connectTimeoutMs) ? connectTimeoutMs : 30000,
     };
 
+    const ssl = buildSslConfig(parsedUrl);
+    if (ssl !== undefined) {
+      config.ssl = ssl;
+    }
+
+    return config;
   } catch {
     return databaseUrl;
   }

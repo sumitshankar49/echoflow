@@ -41,10 +41,29 @@ describe('buildMariaDbPoolConfig', () => {
     expect(buildMariaDbPoolConfig(url)).toBe(url);
   });
 
-  it('returns original url when TLS query params are present', () => {
-    const url =
-      'mysql://user:password@db.example.com:3306/echoflow?sslaccept=strict&ssl=true&connection_limit=30';
+  it('sets ssl=true (strict) when sslaccept=strict is in url', () => {
+    const config = buildMariaDbPoolConfig(
+      'mysql://user:password@db.example.com:3306/echoflow?sslaccept=strict&connection_limit=30',
+    ) as Record<string, unknown>;
 
-    expect(buildMariaDbPoolConfig(url)).toBe(url);
+    expect(config.ssl).toBe(true);
+    expect(config.host).toBe('db.example.com');
+    expect(config.connectionLimit).toBe(30);
+  });
+
+  it('sets ssl with rejectUnauthorized=false when ssl=true is in url', () => {
+    const config = buildMariaDbPoolConfig(
+      'mysql://user:password@db.example.com:3306/echoflow?ssl=true',
+    ) as Record<string, unknown>;
+
+    expect(config.ssl).toEqual({ rejectUnauthorized: false });
+  });
+
+  it('omits ssl config when no ssl params are present', () => {
+    const config = buildMariaDbPoolConfig(
+      'mysql://user:password@localhost:3306/echoflow',
+    ) as Record<string, unknown>;
+
+    expect(config.ssl).toBeUndefined();
   });
 });
