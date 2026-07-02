@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   Clock3,
@@ -95,7 +96,7 @@ export function JournalStudioView() {
   const [savedPulse, setSavedPulse] = useState(false);
   const [activeFormats, setActiveFormats] = useState<string[]>([]);
 
-  const { data: entries = [], isPending } = useQuery({
+  const { data: entries = [], isPending, isError } = useQuery({
     queryKey: journalQueryKeys.list({ date: selectedDate, ...(moodFilter ? { mood: moodFilter } : {}) }),
     queryFn: () => journalService.list({ date: selectedDate, ...(moodFilter ? { mood: moodFilter } : {}) }),
     retry: false,
@@ -513,7 +514,13 @@ export function JournalStudioView() {
                 })}
               </AnimatePresence>
 
-              {entries.length === 0 ? (
+              {isError ? (
+                <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-center">
+                  <AlertTriangle className="mx-auto h-7 w-7 text-destructive" />
+                  <p className="mt-2 text-sm font-medium text-destructive">Couldn&apos;t load journal entries</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Something went wrong fetching this date. Please try again.</p>
+                </div>
+              ) : entries.length === 0 ? (
                 <div className="rounded-2xl border border-dashed p-6 text-center">
                   <Smile className="mx-auto h-7 w-7 text-muted-foreground" />
                   <p className="mt-2 text-sm font-medium">No entries on this date</p>

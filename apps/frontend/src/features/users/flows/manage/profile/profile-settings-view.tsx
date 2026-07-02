@@ -2,7 +2,6 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { isAxiosError } from 'axios';
 import { motion } from 'framer-motion';
 import { Camera, Loader2, Lock, Save, UserRound } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -35,6 +34,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getApiErrorMessage } from '@/shared/api/error-message';
 import { runConfettiBurst } from '@/shared/utils/confetti';
 import {
   changePasswordSchema,
@@ -90,15 +90,6 @@ function getInitials(name: string) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
-}
-
-function getErrorMessage(error: unknown, fallback: string) {
-  if (!isAxiosError<{ message?: string }>(error)) {
-    return fallback;
-  }
-
-  const message = error.response?.data?.message;
-  return typeof message === 'string' ? message : fallback;
 }
 
 export function ProfileSettingsView() {
@@ -158,7 +149,7 @@ export function ProfileSettingsView() {
       runConfettiBurst();
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'Unable to update profile'));
+      toast.error(getApiErrorMessage(error, 'Unable to update profile'));
     },
   });
 
@@ -170,7 +161,7 @@ export function ProfileSettingsView() {
       runConfettiBurst();
     },
     onError: (error) => {
-      toast.error(getErrorMessage(error, 'Unable to change password'));
+      toast.error(getApiErrorMessage(error, 'Unable to change password'));
     },
   });
 

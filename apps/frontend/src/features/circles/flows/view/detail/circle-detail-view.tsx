@@ -27,6 +27,7 @@ import { ConfirmActionDialog } from '@/components/common/confirm-action-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { getApiErrorMessage } from '@/shared/api/error-message';
 import { circlesService } from '../../../shared/data/circles.service';
 import { useCircleDetail } from './use-circle-detail';
 import { useCircleSharedNotes } from './use-circle-shared-notes';
@@ -105,7 +106,7 @@ export function CircleDetailView({ id }: { id: string }) {
       return 'No account found for this email yet. Share the invite link so they can join after sign up.';
     }
 
-    return message || 'Unable to send invitation';
+    return getApiErrorMessage(error, 'Unable to send invitation');
   }
 
   const inviteMutation = useMutation({

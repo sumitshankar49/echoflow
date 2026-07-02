@@ -464,7 +464,7 @@ function SettingsPanel({
 // ─── Main View ─────────────────────────────────────────────────────────────────
 
 export function FocusModeView() {
-  const { data: settings, isPending } = useFocusSettings();
+  const { data: settings, isPending, isError } = useFocusSettings();
   const { mutate: updateSettings, isPending: isSaving } = useUpdateFocusSettings();
   const { mutate: recordSession } = useRecordFocusSession();
 
@@ -550,6 +550,12 @@ export function FocusModeView() {
     document.addEventListener('fullscreenchange', handler);
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
+
+  useEffect(() => {
+    if (isError) {
+      toast.error("Couldn't load your focus settings — using defaults for now.");
+    }
+  }, [isError]);
 
   if (isPending) {
     return (

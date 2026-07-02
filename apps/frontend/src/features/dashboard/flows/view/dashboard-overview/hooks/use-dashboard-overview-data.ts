@@ -29,14 +29,20 @@ function readFavoritePlaylistIds(): string[] {
 
 type DashboardDataState = DashboardOverviewViewModel & {
   isOverviewPending: boolean;
+  isOverviewError: boolean;
+  isMusicPending: boolean;
 };
 
 export function useDashboardOverviewData(): DashboardDataState {
-  const { data: overview, isPending: isOverviewPending } = useQuery({
+  const {
+    data: overview,
+    isPending: isOverviewPending,
+    isError: isOverviewError,
+  } = useQuery({
     queryKey: ['dashboard', 'overview'],
     queryFn: dashboardOverviewApi.getOverview,
   });
-  const { data: playlists = [] } = usePlaylistList();
+  const { data: playlists = [], isPending: isPlaylistPending } = usePlaylistList();
   const favoritePlaylistIds = readFavoritePlaylistIds();
 
   const favoritePlaylist = favoritePlaylistIds
@@ -47,5 +53,7 @@ export function useDashboardOverviewData(): DashboardDataState {
   return {
     ...createDashboardOverviewViewModel(overview, quickPlayerPlaylistOverride),
     isOverviewPending,
+    isOverviewError,
+    isMusicPending: isOverviewPending || isPlaylistPending,
   };
 }

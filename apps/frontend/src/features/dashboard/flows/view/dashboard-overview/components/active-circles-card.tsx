@@ -8,15 +8,17 @@ import {
   AvatarGroupCount,
 } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { ShimmerCard } from '@/components/common/ShimmerCard';
 
 import { initials } from '../shared/dashboard-overview.utils';
 import type { DashboardCircle } from '../types';
 
 type ActiveCirclesCardProps = {
+  isPending: boolean;
   activeCircles: DashboardCircle[];
 };
 
-export function ActiveCirclesCard({ activeCircles }: ActiveCirclesCardProps) {
+export function ActiveCirclesCard({ isPending, activeCircles }: ActiveCirclesCardProps) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
@@ -33,7 +35,11 @@ export function ActiveCirclesCard({ activeCircles }: ActiveCirclesCardProps) {
       </div>
 
       <div className="mt-4 space-y-3">
-        {activeCircles.length ? (
+        {isPending ? (
+          Array.from({ length: 2 }).map((_, index) => (
+            <ShimmerCard key={index} lineCount={2} showAvatar delay={index * 0.06} className="border-border/50 bg-background/55 p-3" />
+          ))
+        ) : activeCircles.length ? (
           activeCircles.map((circle) => {
             const acceptedMembers = (circle.members ?? []).filter((member) => member.status === 'accepted');
             const fallbackName = circle.name.split(' ')[0] || 'Member';

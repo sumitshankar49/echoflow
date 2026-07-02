@@ -3,12 +3,14 @@ import Link from 'next/link';
 import { Pause, Play, SkipBack, SkipForward, Waves, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { ShimmerCard } from '@/components/common/ShimmerCard';
 import { formatTime } from '@/features/music/shared/domain/music.utils';
 
 import { guessTrackName } from '../shared/dashboard-overview.utils';
 import type { DashboardPlaylist } from '../types';
 
 type MusicQuickPlayerCardProps = {
+  isPending: boolean;
   quickPlayerPlaylist: DashboardPlaylist | undefined;
   playlistName: string;
   activeTrackUrl: string;
@@ -27,6 +29,7 @@ type MusicQuickPlayerCardProps = {
 };
 
 export function MusicQuickPlayerCard({
+  isPending,
   quickPlayerPlaylist,
   playlistName,
   activeTrackUrl,
@@ -58,7 +61,9 @@ export function MusicQuickPlayerCard({
         <Waves className="h-5 w-5 text-cyan-500" />
       </div>
 
-      {quickPlayerPlaylist || hasTracks ? (
+      {isPending ? (
+        <ShimmerCard lineCount={4} className="mt-4 border-border/50 bg-background/55" />
+      ) : quickPlayerPlaylist || hasTracks ? (
         <div className="mt-4 rounded-2xl border border-border/70 bg-background/70 p-4">
           <p className="font-medium">{hasTracks ? playlistName : quickPlayerPlaylist?.name}</p>
           <p className="mt-1 text-sm text-muted-foreground">

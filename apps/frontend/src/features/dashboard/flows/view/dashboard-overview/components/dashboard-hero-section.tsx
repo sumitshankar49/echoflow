@@ -2,9 +2,11 @@ import { CalendarClock, BookOpen, Music2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 import { RealTimeClock } from '@/components/common/RealTimeClock';
+import { SkeletonWave } from '@/components/common/SkeletonWave';
 import type { DashboardUser } from '../types';
 
 type DashboardHeroSectionProps = {
+  isPending: boolean;
   me: DashboardUser | null | undefined;
   notesCount: number;
   topRemindersCount: number;
@@ -15,6 +17,7 @@ type DashboardHeroSectionProps = {
 };
 
 export function DashboardHeroSection({
+  isPending,
   me,
   notesCount,
   topRemindersCount,
@@ -48,15 +51,27 @@ export function DashboardHeroSection({
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-white/50">Notes</p>
-              <p className="mt-2 text-3xl font-semibold">{notesCount}</p>
+              {isPending ? (
+                <SkeletonWave className="mt-2 h-8 w-12" />
+              ) : (
+                <p className="mt-2 text-3xl font-semibold">{notesCount}</p>
+              )}
             </div>
             <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-white/50">Upcoming</p>
-              <p className="mt-2 text-3xl font-semibold">{topRemindersCount}</p>
+              {isPending ? (
+                <SkeletonWave className="mt-2 h-8 w-12" delay={0.05} />
+              ) : (
+                <p className="mt-2 text-3xl font-semibold">{topRemindersCount}</p>
+              )}
             </div>
             <div className="rounded-[1.2rem] border border-white/10 bg-white/5 p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-white/50">Active circles</p>
-              <p className="mt-2 text-3xl font-semibold">{activeCirclesCount}</p>
+              {isPending ? (
+                <SkeletonWave className="mt-2 h-8 w-12" delay={0.1} />
+              ) : (
+                <p className="mt-2 text-3xl font-semibold">{activeCirclesCount}</p>
+              )}
             </div>
           </div>
         </div>
@@ -74,20 +89,28 @@ export function DashboardHeroSection({
                   weekday: 'long',
                 })}
               </p>
-              <div className="space-y-2 text-sm leading-6 text-white/80">
-                <p className="flex w-full items-start gap-2">
-                  <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{nextReminderTitle ? `Next: ${nextReminderTitle}` : 'No urgent reminders'}</span>
-                </p>
-                <p className="flex w-full items-start gap-2">
-                  <BookOpen className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{recentNoteTitle ? `Recent note: ${recentNoteTitle}` : 'Capture your first note'}</span>
-                </p>
-                <p className="flex w-full items-start gap-2">
-                  <Music2 className="mt-0.5 h-4 w-4 shrink-0" />
-                  <span>{playlistName ? `${playlistName} ready` : 'Create a focus playlist'}</span>
-                </p>
-              </div>
+              {isPending ? (
+                <div className="space-y-2">
+                  <SkeletonWave className="h-4 w-11/12" />
+                  <SkeletonWave className="h-4 w-9/12" delay={0.06} />
+                  <SkeletonWave className="h-4 w-8/12" delay={0.12} />
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm leading-6 text-white/80">
+                  <p className="flex w-full items-start gap-2">
+                    <CalendarClock className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{nextReminderTitle ? `Next: ${nextReminderTitle}` : 'No urgent reminders'}</span>
+                  </p>
+                  <p className="flex w-full items-start gap-2">
+                    <BookOpen className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{recentNoteTitle ? `Recent note: ${recentNoteTitle}` : 'Capture your first note'}</span>
+                  </p>
+                  <p className="flex w-full items-start gap-2">
+                    <Music2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{playlistName ? `${playlistName} ready` : 'Create a focus playlist'}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -1,14 +1,17 @@
 import { Bell } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+import { ShimmerCard } from '@/components/common/ShimmerCard';
+
 import { formatLongDate, relativeFromNow } from '../shared/dashboard-overview.utils';
 import type { DashboardReminder } from '../types';
 
 type UpcomingRemindersCardProps = {
+  isPending: boolean;
   topReminders: DashboardReminder[];
 };
 
-export function UpcomingRemindersCard({ topReminders }: UpcomingRemindersCardProps) {
+export function UpcomingRemindersCard({ isPending, topReminders }: UpcomingRemindersCardProps) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
@@ -25,7 +28,11 @@ export function UpcomingRemindersCard({ topReminders }: UpcomingRemindersCardPro
       </div>
 
       <div className="mt-4 space-y-3">
-        {topReminders.length ? (
+        {isPending ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <ShimmerCard key={index} lineCount={2} delay={index * 0.06} className="border-border/50 bg-background/55 p-3" />
+          ))
+        ) : topReminders.length ? (
           topReminders.map((reminder) => (
             <div key={reminder.id} className="rounded-xl border border-border/70 bg-background/70 p-3">
               <p className="font-medium">{reminder.title}</p>

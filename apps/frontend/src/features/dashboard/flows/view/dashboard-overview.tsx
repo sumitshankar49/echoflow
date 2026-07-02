@@ -1,5 +1,7 @@
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+
 import { ActiveCirclesCard } from "./dashboard-overview/components/active-circles-card";
 import { DashboardHeroSection } from "./dashboard-overview/components/dashboard-hero-section";
 import { FocusPlanCard } from "./dashboard-overview/components/focus-plan-card";
@@ -19,6 +21,8 @@ export function DashboardOverview() {
     pendingRemindersCount,
     activeCirclesCount,
     isOverviewPending,
+    isOverviewError,
+    isMusicPending,
     topReminders,
     recentNotes,
     activeCircles,
@@ -45,7 +49,15 @@ export function DashboardOverview() {
 
   return (
     <div className="relative w-full space-y-6 pb-6">
+      {isOverviewError ? (
+        <div className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>Couldn&apos;t load your dashboard data. Some information below may be missing or out of date.</p>
+        </div>
+      ) : null}
+
       <DashboardHeroSection
+        isPending={isOverviewPending}
         me={me}
         notesCount={notesCount}
         topRemindersCount={pendingRemindersCount}
@@ -64,6 +76,7 @@ export function DashboardOverview() {
 
       <section className="grid gap-4 xl:grid-cols-12">
         <FocusPlanCard
+          isPending={isOverviewPending}
           topRemindersCount={pendingRemindersCount}
           nextReminderTitle={topReminders[0]?.title}
           recentNoteTitle={recentNotes[0]?.title}
@@ -71,7 +84,7 @@ export function DashboardOverview() {
 
         <RecentNotesCard isPending={isOverviewPending} recentNotes={recentNotes} />
 
-        <UpcomingRemindersCard topReminders={topReminders} />
+        <UpcomingRemindersCard isPending={isOverviewPending} topReminders={topReminders} />
       </section>
 
       <SectionTitle
@@ -80,9 +93,10 @@ export function DashboardOverview() {
       />
 
       <section className="grid gap-4 xl:grid-cols-12">
-        <ActiveCirclesCard activeCircles={activeCircles} />
+        <ActiveCirclesCard isPending={isOverviewPending} activeCircles={activeCircles} />
 
         <MusicQuickPlayerCard
+          isPending={isMusicPending}
           quickPlayerPlaylist={quickPlayerPlaylist}
           playlistName={playlistName}
           activeTrackUrl={activeTrackUrl}
@@ -100,7 +114,7 @@ export function DashboardOverview() {
           goToNextTrack={goToNextTrack}
         />
 
-        <SmartSuggestionsCard smartSuggestions={smartSuggestions} />
+        <SmartSuggestionsCard isPending={isOverviewPending} smartSuggestions={smartSuggestions} />
       </section>
     </div>
   );

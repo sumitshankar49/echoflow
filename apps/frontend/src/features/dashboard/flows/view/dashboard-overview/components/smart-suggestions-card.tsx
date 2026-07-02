@@ -1,13 +1,17 @@
 import Link from 'next/link';
 import { CircleDot, Lightbulb } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+import { ShimmerCard } from '@/components/common/ShimmerCard';
+
 import type { DashboardSuggestion } from '../types';
 
 type SmartSuggestionsCardProps = {
+  isPending: boolean;
   smartSuggestions: DashboardSuggestion[];
 };
 
-export function SmartSuggestionsCard({ smartSuggestions }: SmartSuggestionsCardProps) {
+export function SmartSuggestionsCard({ isPending, smartSuggestions }: SmartSuggestionsCardProps) {
   return (
     <motion.article
       initial={{ opacity: 0, y: 12 }}
@@ -24,7 +28,11 @@ export function SmartSuggestionsCard({ smartSuggestions }: SmartSuggestionsCardP
       </div>
 
       <div className="mt-4 space-y-3">
-        {smartSuggestions.map((item) => (
+        {isPending ? (
+          Array.from({ length: 3 }).map((_, index) => (
+            <ShimmerCard key={index} lineCount={2} delay={index * 0.06} className="border-border/50 bg-background/55 p-3" />
+          ))
+        ) : smartSuggestions.map((item) => (
           <motion.div
             key={item.id}
             whileHover={{ y: -2 }}
