@@ -1,7 +1,7 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import { PrismaClient } from '../generated/prisma/client';
+import { PrismaClient } from '../generated/prisma';
 
 /**
  * Maps SSL/TLS URL query params to a mariadb pool ssl option.
@@ -72,6 +72,8 @@ export const buildMariaDbPoolConfig = (databaseUrl: string): string | Record<str
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(PrismaService.name);
+
   constructor(configService: ConfigService) {
     const databaseConfig = buildMariaDbPoolConfig(
       configService.getOrThrow<string>('database.url'),
@@ -82,7 +84,37 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    const maxAttempts = 5;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.$connect();
+        if (attempt > 1) {
+          this.logger.warn(`Database connection recovered on attempt ${attempt}/${maxAttempts}.`);
+        }
+        return;
+      } catch (error) {
+        const isLastAttempt = attempt === maxAttempts;
+        const message = error instanceof Error ? error.message : String(error);
+
+        if (isLastAttempt) {
+          this.logger.error(
+            `Failed to connect to database after ${maxAttempts} attempts. ${message}`,
+          );
+          this.logger.error(
+            'Check DATABASE_URL/DB_* values and ensure MySQL/MariaDB is reachable before starting the API.',
+          );
+          throw error;
+        }
+
+        this.logger.warn(
+          `Database connection attempt ${attempt}/${maxAttempts} failed: ${message}. Retrying...`,
+        );
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, attempt * 1000);
+        });
+      }
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

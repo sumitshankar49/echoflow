@@ -20,7 +20,14 @@ model User {
   createdAt          DateTime           @default(now()) @db.Timestamp(6)
   updatedAt          DateTime           @default(now()) @updatedAt @db.Timestamp(6)
   sharedNotes        CircleSharedNote[] @relation("CircleSharedBy")
+  focusSessions      FocusSession[]
+  focusSettings      FocusSettings?
+  habitLogs          HabitLog[]
+  habits             Habit[]
+  journals           Journal[]
+  memories           UserMemory[]
   notes              Note[]
+  tasks              Task[]
 
   @@map("users")
 }
@@ -122,6 +129,25 @@ model Reminder {
   @@map("reminders")
 }
 
+model UserMemory {
+  id              String           @id @default(uuid()) @db.VarChar(36)
+  title           String           @db.VarChar(200)
+  content         String           @db.Text
+  sourceType      MemorySourceType @default(note)
+  sourceId        String?          @db.VarChar(36)
+  tags            Json?
+  importanceScore Float            @default(0)
+  userId          String           @db.VarChar(36)
+  createdAt       DateTime         @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime         @default(now()) @updatedAt @db.Timestamp(6)
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_memories_user_id")
+
+  @@index([userId], map: "idx_memories_user_id")
+  @@index([sourceType], map: "idx_memories_source_type")
+  @@index([updatedAt], map: "idx_memories_updated_at")
+  @@map("memories")
+}
+
 model RevokedToken {
   id        String   @id @default(uuid()) @db.VarChar(36)
   token     String   @unique(map: "idx_revoked_tokens_token") @db.VarChar(512)
@@ -140,4 +166,136 @@ model Mood {
 
   @@index([userId], map: "idx_moods_user_id")
   @@map("moods")
+}
+
+model Journal {
+  id        String      @id @default(uuid()) @db.VarChar(36)
+  title     String      @db.VarChar(200)
+  content   String      @db.Text
+  mood      JournalMood @default(neutral)
+  tags      Json?
+  date      DateTime    @db.Date
+  userId    String      @db.VarChar(36)
+  createdAt DateTime    @default(now()) @db.Timestamp(6)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_journals_user_id")
+
+  @@index([userId], map: "idx_journals_user_id")
+  @@index([mood], map: "idx_journals_mood")
+  @@index([date], map: "idx_journals_date")
+  @@map("journals")
+}
+
+model Task {
+  id          String       @id @default(uuid()) @db.VarChar(36)
+  title       String       @db.VarChar(200)
+  description String?      @db.Text
+  dueDate     DateTime     @db.Timestamp(0)
+  priority    TaskPriority @default(medium)
+  isCompleted Boolean      @default(false)
+  tags        Json?
+  userId      String       @db.VarChar(36)
+  createdAt   DateTime     @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime     @default(now()) @updatedAt @db.Timestamp(6)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_tasks_user_id")
+
+  @@index([userId], map: "idx_tasks_user_id")
+  @@index([dueDate], map: "idx_tasks_due_date")
+  @@index([priority], map: "idx_tasks_priority")
+  @@index([isCompleted], map: "idx_tasks_completed")
+  @@map("tasks")
+}
+
+model FocusSettings {
+  id                     String   @id @default(uuid()) @db.VarChar(36)
+  userId                 String   @unique @db.VarChar(36)
+  focusDuration          Int      @default(25)
+  shortBreakDuration     Int      @default(5)
+  longBreakDuration      Int      @default(15)
+  sessionsUntilLongBreak Int      @default(4)
+  autoStartBreaks        Boolean  @default(false)
+  autoStartSessions      Boolean  @default(false)
+  soundEnabled           Boolean  @default(true)
+  createdAt              DateTime @default(now()) @db.Timestamp(6)
+  updatedAt              DateTime @default(now()) @updatedAt @db.Timestamp(6)
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_focus_settings_user_id")
+
+  @@map("focus_settings")
+}
+
+model FocusSession {
+  id              String    @id @default(uuid()) @db.VarChar(36)
+  userId          String    @db.VarChar(36)
+  durationMinutes Int
+  label           String?   @db.VarChar(200)
+  wasCompleted    Boolean   @default(false)
+  completedAt     DateTime? @db.Timestamp(0)
+  createdAt       DateTime  @default(now()) @db.Timestamp(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_focus_sessions_user_id")
+
+  @@index([userId], map: "idx_focus_sessions_user_id")
+  @@index([createdAt], map: "idx_focus_sessions_created_at")
+  @@map("focus_sessions")
+}
+
+model Habit {
+  id                String         @id @default(uuid()) @db.VarChar(36)
+  userId            String         @db.VarChar(36)
+  name              String         @db.VarChar(100)
+  description       String?        @db.VarChar(300)
+  color             String         @default("#7c3aed") @db.VarChar(20)
+  icon              String         @default("✨") @db.VarChar(10)
+  frequency         HabitFrequency @default(daily)
+  targetDaysPerWeek Int            @default(7)
+  isArchived        Boolean        @default(false)
+  createdAt         DateTime       @default(now()) @db.Timestamp(6)
+  updatedAt         DateTime       @default(now()) @updatedAt @db.Timestamp(6)
+  logs              HabitLog[]
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_habits_user_id")
+
+  @@index([userId], map: "idx_habits_user_id")
+  @@index([userId, isArchived], map: "idx_habits_user_archived")
+  @@map("habits")
+}
+
+model HabitLog {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  habitId   String   @db.VarChar(36)
+  userId    String   @db.VarChar(36)
+  logDate   DateTime @db.Date
+  note      String?  @db.VarChar(300)
+  createdAt DateTime @default(now()) @db.Timestamp(6)
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_habit_logs_habit_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "FK_habit_logs_user_id")
+
+  @@unique([habitId, logDate], map: "uq_habit_log_habit_date")
+  @@index([habitId], map: "idx_habit_logs_habit_id")
+  @@index([userId, logDate], map: "idx_habit_logs_user_date")
+  @@map("habit_logs")
+}
+
+enum MemorySourceType {
+  note
+  journal
+  task
+}
+
+enum JournalMood {
+  happy
+  calm
+  neutral
+  anxious
+  sad
+  excited
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+}
+
+enum HabitFrequency {
+  daily
+  weekly
 }

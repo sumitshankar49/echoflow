@@ -14,7 +14,6 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -236,10 +235,6 @@ export function ProfileSettingsView() {
               <p className="text-sm text-zinc-700 dark:text-zinc-300">{profile?.email}</p>
             </div>
           </div>
-
-          <Badge variant="secondary" className="w-fit border bg-white/70 px-3 py-1 text-xs">
-            Premium Experience
-          </Badge>
         </div>
       </div>
 

@@ -21,10 +21,15 @@ const configuration_1 = __importDefault(require("./config/configuration"));
 const auth_module_1 = require("./modules/auth/auth.module");
 const circles_module_1 = require("./modules/circles/circles.module");
 const dashboard_module_1 = require("./modules/dashboard/dashboard.module");
+const focus_module_1 = require("./modules/focus/focus.module");
+const habits_module_1 = require("./modules/habits/habits.module");
+const journal_module_1 = require("./modules/journal/journal.module");
+const memories_module_1 = require("./modules/memories/memories.module");
 const mood_module_1 = require("./modules/mood/mood.module");
 const music_module_1 = require("./modules/music/music.module");
 const notes_module_1 = require("./modules/notes/notes.module");
 const reminders_module_1 = require("./modules/reminders/reminders.module");
+const tasks_module_1 = require("./modules/tasks/tasks.module");
 const users_module_1 = require("./modules/users/users.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 let AppModule = class AppModule {
@@ -61,10 +66,15 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             circles_module_1.CirclesModule,
             dashboard_module_1.DashboardModule,
+            focus_module_1.FocusModule,
+            habits_module_1.HabitsModule,
+            journal_module_1.JournalModule,
+            memories_module_1.MemoriesModule,
             mood_module_1.MoodModule,
             music_module_1.MusicModule,
             notes_module_1.NotesModule,
             reminders_module_1.RemindersModule,
+            tasks_module_1.TasksModule,
             users_module_1.UsersModule,
         ],
         controllers: [app_controller_1.AppController],

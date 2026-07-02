@@ -10,6 +10,7 @@ import { SmartSuggestionsCard } from "./dashboard-overview/components/smart-sugg
 import { UpcomingRemindersCard } from "./dashboard-overview/components/upcoming-reminders-card";
 import { useDashboardOverviewData } from "./dashboard-overview/hooks/use-dashboard-overview-data";
 import { useDashboardPlayer } from "./dashboard-overview/hooks/use-dashboard-player";
+import { SectionTitle } from '@/components/common/SectionTitle';
 
 export function DashboardOverview() {
   const {
@@ -56,6 +57,11 @@ export function DashboardOverview() {
 
       <QuickNavGrid />
 
+      <SectionTitle
+        title="Plan and Priorities"
+        description="Actionable reminders, notes, and focus-ready tasks for the day."
+      />
+
       <section className="grid gap-4 xl:grid-cols-12">
         <FocusPlanCard
           topRemindersCount={pendingRemindersCount}
@@ -67,6 +73,11 @@ export function DashboardOverview() {
 
         <UpcomingRemindersCard topReminders={topReminders} />
       </section>
+
+      <SectionTitle
+        title="Connection and Flow"
+        description="Stay close to your circles, soundtrack, and smart guidance."
+      />
 
       <section className="grid gap-4 xl:grid-cols-12">
         <ActiveCirclesCard activeCircles={activeCircles} />

@@ -30,7 +30,6 @@ import { toast } from "sonner";
 
 import { ShimmerCard } from "@/components/common/ShimmerCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -419,15 +418,6 @@ export default function ProfilePage() {
                       <p className="text-sm text-muted-foreground">{me?.email}</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                      <Badge className="rounded-md border-0 bg-primary/30 px-2.5 py-1 text-xs text-primary-foreground">
-                        Pro Member
-                      </Badge>
-                      <span className="inline-flex items-center gap-2 text-sm text-foreground">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                        Online
-                      </span>
-                    </div>
                   </div>
                 </div>
 

@@ -11,10 +11,15 @@ import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
 import { CirclesModule } from './modules/circles/circles.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { FocusModule } from './modules/focus/focus.module';
+import { HabitsModule } from './modules/habits/habits.module';
+import { JournalModule } from './modules/journal/journal.module';
+import { MemoriesModule } from './modules/memories/memories.module';
 import { MoodModule } from './modules/mood/mood.module';
 import { MusicModule } from './modules/music/music.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { RemindersModule } from './modules/reminders/reminders.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -48,10 +53,15 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     CirclesModule,
     DashboardModule,
+    FocusModule,
+    HabitsModule,
+    JournalModule,
+    MemoriesModule,
     MoodModule,
     MusicModule,
     NotesModule,
     RemindersModule,
+    TasksModule,
     UsersModule,
   ],
   controllers: [AppController],
